@@ -1,4 +1,4 @@
-project(deeptime_tests)
+project(ct-iprd-tests)
 
 include(${CMAKE_SOURCE_DIR}/devtools/cmake/Conan.cmake)
 run_conan()

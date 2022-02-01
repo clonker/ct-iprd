@@ -1,15 +1,10 @@
-project(ct-iprd)
-
 cmake_minimum_required(VERSION 3.9)
+project(ct-iprd LANGUAGES C CXX VERSION 0.0.0)
 
 set(CMAKE_CXX_STANDARD 17)
 
-set(DEEPTIME_BUILD_CPP_TESTS OFF CACHE BOOL "Whether to build the c++ unit tests")
+set(CT_IPRD_BUILD_TESTS OFF CACHE BOOL "Whether to build the c++ unit tests")
 
-if(DEFINED PROJECT_NAME)
-    set(DEEPTIME_IS_SUBPROJECT ON)
-endif()
-project(deeptime LANGUAGES C CXX VERSION 0.0.0)
 
 find_package(OpenMP 4)
 if(OpenMP_FOUND)
