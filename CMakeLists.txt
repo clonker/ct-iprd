@@ -1,0 +1,33 @@
+project(ct-iprd)
+
+cmake_minimum_required(VERSION 3.9)
+
+set(CMAKE_CXX_STANDARD 17)
+
+set(DEEPTIME_BUILD_CPP_TESTS OFF CACHE BOOL "Whether to build the c++ unit tests")
+
+if(DEFINED PROJECT_NAME)
+    set(DEEPTIME_IS_SUBPROJECT ON)
+endif()
+project(deeptime LANGUAGES C CXX VERSION 0.0.0)
+
+find_package(OpenMP 4)
+if(OpenMP_FOUND)
+    add_definitions(-DUSE_OPENMP)
+endif()
+
+if(MSVC)
+    add_compile_options(/W3 /EHsc /bigobj /permissive- /std:c++17)
+endif()
+
+find_package(pybind11 REQUIRED)
+find_package(fmt REQUIRED)
+find_package(spdlog REQUIRED)
+
+add_library(${PROJECT_NAME} INTERFACE)
+target_include_directories(${PROJECT_NAME} INTERFACE include)
+add_library(ct-iprd::ct-iprd ALIAS ${PROJECT_NAME})
+
+if(CT_IPRD_BUILD_TESTS)
+    add_subdirectory(tests)
+endif()
