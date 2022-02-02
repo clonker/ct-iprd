@@ -38,16 +38,20 @@
 
 namespace ctpl {
 
+
+class Worker;
+
 class ThreadPool {
+public:
     using size_type = std::uint_fast64_t;
     using Task = std::function<void(size_type)>;
     using TaskQueue = std::queue<Task>;
-public:
 
-    explicit ThreadPool(size_type nThreads = static_cast<size_type>(std::thread::hardware_concurrency())) {
-        threads.reserve(nThreads);
+    explicit ThreadPool(size_type nThreads = static_cast<size_type>(std::thread::hardware_concurrency())) : nThreads(nThreads) {
+        threads.resize(nThreads);
+        flags.resize(nThreads);
         for(size_type i = 0; i < nThreads; ++i) {
-            threads.push_back(std::make_unique<std::jthread>(&ThreadPool::worker, this));
+            initializeThread(i);
         }
     }
 
@@ -97,37 +101,6 @@ public:
     int n_idle() { return this->nWaiting; }
     std::jthread & get_thread(int i) { return *this->threads[i]; }
 
-    // change the number of threads in the pool
-    // should be called from one thread, otherwise be careful to not interleave, also with this->stop()
-    // nThreads must be >= 0
-    void resize(int nThreads) {
-        if (!this->isStop && !this->isDone) {
-            int oldNThreads = static_cast<int>(this->threads.size());
-            if (oldNThreads <= nThreads) {  // if the number of threads is increased
-                this->threads.resize(nThreads);
-                this->flags.resize(nThreads);
-
-                for (int i = oldNThreads; i < nThreads; ++i) {
-                    this->flags[i] = std::make_shared<std::atomic<bool>>(false);
-                    this->set_thread(i);
-                }
-            }
-            else {  // the number of threads is decreased
-                for (int i = oldNThreads - 1; i >= nThreads; --i) {
-                    *this->flags[i] = true;  // this thread will finish
-                    this->threads[i]->detach();
-                }
-                {
-                    // stop the detached threads that were waiting
-                    std::unique_lock<std::mutex> lock(this->mutex);
-                    this->cv.notify_all();
-                }
-                this->threads.resize(nThreads);  // safe to delete because the threads are detached
-                this->flags.resize(nThreads);  // safe to delete because the threads have copies of shared_ptr of the flags, not originals
-            }
-        }
-    }
-
     // empty the queue
     void clearQueue() {
         std::scoped_lock lock {queueMutex};
@@ -168,63 +141,53 @@ public:
     }
 
     template <typename F, typename... A, typename R = std::invoke_result_t<std::decay_t<F>, size_type, std::decay_t<A>...>>
-    std::future<R> pushNew(F &&f, A&&... args) {
+    std::future<R> push(F &&f, A&&... args) {
         ++tasks_total;
-        auto task = std::packaged_task<R(size_type)>([&](size_type threadIndex) {
+        auto task = std::make_shared<std::packaged_task<R(size_type)>>([&f, &args...](size_type threadIndex) {
             return f(threadIndex, std::forward<A>(args)...);
         });
         {
             std::scoped_lock lock {queueMutex};
-            tasks.push(task);
+            tasks.push([task](size_type id) { (*task)(id);} );
         }
         {
             std::unique_lock<std::mutex> lock(this->mutex);
             this->cv.notify_one();
         }
-        return task.get_future();
+        return task->get_future();
     }
-
-    /*template<typename F, typename... Rest>
-    auto push(F && f, Rest&&... rest) -> std::future<decltype(f(0, rest...))> {
-        auto pck = std::make_shared<std::packaged_task<decltype(f(0, rest...))(int)>>(
-                std::bind(std::forward<F>(f), std::placeholders::_1, std::forward<Rest>(rest)...)
-        );
-        auto _f = new std::function<void(int id)>([pck](int id) {
-            (*pck)(id);
-        });
-        this->q.push(_f);
-        std::unique_lock<std::mutex> lock(this->mutex);
-        this->cv.notify_one();
-        return pck->get_future();
-    }
-
-    // run the user's function that excepts argument int - id of the running thread. returned value is templatized
-    // operator returns std::future, where the user can get the result and rethrow the catched exceptins
-    template<typename F>
-    auto push(F && f) ->std::future<decltype(f(0))> {
-        auto pck = std::make_shared<std::packaged_task<decltype(f(0))(int)>>(std::forward<F>(f));
-        auto _f = new std::function<void(int id)>([pck](int id) {
-            (*pck)(id);
-        });
-        this->q.push(_f);
-        std::unique_lock<std::mutex> lock(this->mutex);
-        this->cv.notify_one();
-        return pck->get_future();
-    }*/
-
 
 private:
-    void worker() {
-        while (isRunning) {
-            Task task;
-            if (!paused && pop_task(task)) {
-                task();
-                tasks_total--;
-            } else {
-                std::this_thread::yield();
+
+    void initializeThread(size_type i) {
+        auto worker = [this, i, flag = flags.at(i)]() {
+            while (true) {
+                Task task;
+                auto tasksAvailable = pop_task(task);
+                while (tasksAvailable) {  // if there is anything in the queue
+                    task(i);
+                    if (flag) {
+                        return;  // the thread is wanted to stop, return even if the queue is not empty yet
+                    } else {
+                        tasksAvailable = pop_task(task);
+                    }
+                }
+                // the queue is empty here, wait for the next command
+                std::unique_lock<std::mutex> lock(this->mutex);
+                ++this->nWaiting;
+                this->cv.wait(lock, [this, &task, &tasksAvailable, &flag](){
+                    tasksAvailable = pop_task(task);
+                    return tasksAvailable || this->isDone || flag;
+                });
+                --this->nWaiting;
+                if (!tasksAvailable) {
+                    return;  // if the queue is empty and this->isDone == true or *flag then return
+                }
             }
-        }
+        };
+        threads[i] = std::make_unique<std::jthread>(worker);
     }
+
 
     bool pop_task(Task &task)
     {
@@ -238,42 +201,13 @@ private:
         }
     }
 
-    void set_thread(int i) {
-        std::shared_ptr<std::atomic<bool>> flag(this->flags[i]); // a copy of the shared ptr to the flag
-        auto f = [this, i, flag/* a copy of the shared ptr to the flag */]() {
-            std::atomic<bool> & _flag = *flag;
-            std::function<void(int id)> * _f;
-            bool isPop = this->q.pop(_f);
-            while (true) {
-                while (isPop) {  // if there is anything in the queue
-                    std::unique_ptr<std::function<void(int id)>> func(_f); // at return, delete the function even if an exception occurred
-                    (*_f)(i);
-                    if (_flag)
-                        return;  // the thread is wanted to stop, return even if the queue is not empty yet
-                    else
-                        isPop = this->q.pop(_f);
-                }
-                // the queue is empty here, wait for the next command
-                std::unique_lock<std::mutex> lock(this->mutex);
-                ++this->nWaiting;
-                this->cv.wait(lock, [this, &_f, &isPop, &_flag](){ isPop = this->q.pop(_f); return isPop || this->isDone || _flag; });
-                --this->nWaiting;
-                if (!isPop)
-                    return;  // if the queue is empty and this->isDone == true or *flag then return
-            }
-        };
-        this->threads[i] = std::make_unique<std::jthread>(f);
-    }
-
     void init() {
         this->nWaiting = 0;
         this->isStop = false;
         this->isDone = false;
     }
 
-    std::vector<std::shared_ptr<std::atomic<bool>>> flags;
-
-    std::mutex queueMutex {};
+    mutable std::mutex queueMutex {};
     TaskQueue tasks = {};
 
     std::atomic<bool> isRunning = true;
@@ -281,7 +215,10 @@ private:
     std::atomic<bool> isStop {false};
     std::atomic<size_type> nWaiting {};  // how many threads are waiting
     size_type nThreads;
+
+    std::vector<std::shared_ptr<std::atomic<bool>>> flags;
     std::vector<std::unique_ptr<std::jthread>> threads;
+
     std::atomic<size_type> nTasks;
 
     std::mutex mutex;
