@@ -7,7 +7,7 @@
 #include <ctiprd/thread/ctpl.h>
 
 TEST_CASE("Thread pool sanity", "[ctpl]") {
-    ctpl::thread_pool pool {5};
+    ctpl::ThreadPool pool {5};
 
     REQUIRE(pool.size() == 5);
 
