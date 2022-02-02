@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <thread>
 
 #include <ctiprd/util/ops.h>
 #include <ctiprd/util/Index.h>
@@ -72,7 +73,7 @@ public:
             }
             std::size_t grainSize = collection.nParticles() / nJobs;
             auto *pptr = collection.positions();
-            std::vector<thread::scoped_thread> jobs;
+            std::vector<std::jthread> jobs;
             for (int i = 0; i < nJobs - 1; ++i) {
                 auto *pptrNext = std::min(pptr + grainSize * DIM,
                                           collection.positions() + collection.nParticles() * DIM);

@@ -71,7 +71,7 @@ class thread_pool {
 public:
 
     thread_pool() { this->init(); }
-    thread_pool(int nThreads) { this->init(); this->resize(nThreads); }
+    explicit thread_pool(int nThreads) { this->init(); this->resize(nThreads); }
     thread_pool(const thread_pool &) = delete;// = delete;
     thread_pool(thread_pool &&) = delete;// = delete;
     thread_pool & operator=(const thread_pool &) = delete;// = delete;
@@ -87,7 +87,7 @@ public:
 
     // number of idle threads
     int n_idle() { return this->nWaiting; }
-    std::thread & get_thread(int i) { return *this->threads[i]; }
+    std::jthread & get_thread(int i) { return *this->threads[i]; }
 
     // change the number of threads in the pool
     // should be called from one thread, otherwise be careful to not interleave, also with this->stop()
@@ -226,12 +226,12 @@ private:
                     return;  // if the queue is empty and this->isDone == true or *flag then return
             }
         };
-        this->threads[i].reset(new std::thread(f)); // compiler may not support std::make_unique()
+        this->threads[i] = std::make_unique<std::jthread>(f);
     }
 
     void init() { this->nWaiting = 0; this->isStop = false; this->isDone = false; }
 
-    std::vector<std::unique_ptr<std::thread>> threads;
+    std::vector<std::unique_ptr<std::jthread>> threads;
     std::vector<std::shared_ptr<std::atomic<bool>>> flags;
     detail::Queue<std::function<void(int id)> *> q;
     std::atomic<bool> isDone {false};
