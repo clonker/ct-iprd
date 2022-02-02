@@ -11,7 +11,7 @@
 namespace ctiprd::util {
 
 namespace detail {
-template<typename T1, typename... T>
+template<typename T1, typename...>
 struct variadic_first {
     /**
      * type of the first element of a variadic type tuple

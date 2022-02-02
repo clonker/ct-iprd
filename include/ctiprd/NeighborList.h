@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <atomic>
 
+#include <ctiprd/util/ops.h>
 #include <ctiprd/util/Index.h>
 #include <ctiprd/thread/utils.h>
 #include <ctiprd/ParticleCollection.h>
@@ -115,7 +116,7 @@ public:
     }
 
     template<typename F>
-    void forEachNeighbor(std::size_t id, ParticleCollection<DIM> &collection, F fun) const {
+    void forEachNeighbor(std::size_t id, ParticleCollection<DIM, dtype> &collection, F fun) const {
         auto *pos = collection.position(id);
         auto gridPos = this->gridPos(pos);
         for (int i = 0u; i < DIM; ++i) {
