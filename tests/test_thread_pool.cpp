@@ -6,6 +6,7 @@
 #include <catch2/catch.hpp>
 #include <ctiprd/thread/ctpl.h>
 #include <ctiprd/thread/bsho.h>
+#include <ctiprd/thread/ops.h>
 
 TEMPLATE_TEST_CASE("Thread pool sanity", "[pool]", ctpl::thread_pool, bsho::thread_pool) {
     TestType pool {5};

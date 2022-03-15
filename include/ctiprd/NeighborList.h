@@ -16,8 +16,8 @@
 namespace ctiprd::nl {
 
 namespace detail {
-template<int dim, typename ParticleCollection, typename F>
-void forEachParticle(ParticleCollection &collection, F op) {
+template<int dim, typename ParticleCollection, typename F, typename Pool>
+void forEachParticle(ParticleCollection &collection, F op, Pool &pool) {
 
     auto n = collection.nParticles();
     auto *forces = collection.forces().data();
