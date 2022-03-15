@@ -18,27 +18,36 @@ namespace ctiprd {
 using ParticleType = std::uint32_t;
 
 namespace particle_collection {
-enum Flags {
+enum {
     usePositions = 0b001,
     useForces = 0b010,
     useVelocities = 0b100,
-    useAll = usePositions | useForces | useVelocities
 };
 }
 
-template<int DIM, typename dtype, int flags = particle_collection::Flags::useAll>
+template<int DIM, typename dtype, int flags = particle_collection::usePositions | particle_collection::useForces>
 class ParticleCollection {
 public:
+    using Position = Vec<dtype, DIM>;
+    using Force = Vec<dtype, DIM>;
+    using Velocity = Vec<dtype, DIM>;
+
     static constexpr int dim = DIM;
 
-    static constexpr bool containsPositions() { return flags & particle_collection::Flags::usePositions; }
-    static constexpr bool containsForces() { return flags & particle_collection::Flags::useForces; }
-    static constexpr bool containsVelocities() { return flags & particle_collection::Flags::useVelocities; }
+    static constexpr bool containsPositions() { return flags & particle_collection::usePositions; }
+    static constexpr bool containsForces() { return flags & particle_collection::useForces; }
+    static constexpr bool containsVelocities() { return flags & particle_collection::useVelocities; }
 
     explicit ParticleCollection(std::string_view particleType) : particleType_(particleType) {}
 
     [[nodiscard]] std::size_t nParticles() const {
         return positions_.size();
+    }
+
+    void addParticle(const Position &position) {
+        positions_.push_back(position);
+        forces_.template emplace_back();
+        velocities_.template emplace_back();
     }
 
     template<typename F, typename Pool>
@@ -58,16 +67,16 @@ public:
 
         auto grainSize = n / granularity;
 
-        auto loop = [operation = std::forward<F>(op), pos, forces, velocities](auto beginIx, auto endIx) {
+        auto loop = [operation = std::forward<F>(op), pos, forces, velocities](std::size_t beginIx, std::size_t endIx) {
             for (std::size_t i = beginIx; i < endIx; ++i) {
                 if constexpr(containsForces() && containsVelocities()) {
-                    operation(i, pos + i, forces + i, velocities + i);
+                    operation(i, *(pos + i), *(forces + i), *(velocities + i));
                 } else if constexpr(containsForces() && !containsVelocities()) {
-                    operation(i, pos + i, forces + i);
+                    operation(i, *(pos + i), *(forces + i));
                 } else if constexpr(!containsForces() && containsVelocities()) {
-                    operation(i, pos + i, velocities + i);
+                    operation(i, *(pos + i), *(velocities + i));
                 } else {
-                    operation(i, pos + i);
+                    operation(i, *(pos + i));
                 }
             }
         };
@@ -75,12 +84,12 @@ public:
         for (std::size_t i = 0; i < granularity - 1; ++i) {
             auto endIx = beginIx + grainSize;
             if (beginIx != endIx) {
-                futures.push_back(pool.push(loop, beginIx, endIx));
+                futures.push_back(pool->push(loop, beginIx, endIx));
             }
             beginIx = endIx;
         }
         if (beginIx != n) {
-            futures.push_back(pool.push(loop, beginIx, n));
+            futures.push_back(pool->push(loop, beginIx, n));
         }
 
         return std::move(futures);
@@ -90,10 +99,18 @@ public:
         return particleType_;
     }
 
+    const std::vector<Position> &positions () const {
+        return positions_;
+    }
+
+    const std::vector<Force> &forces() const {
+        return forces_;
+    }
+
 private:
-    std::vector<Vec<dtype, DIM>> positions_;
-    std::vector<Vec<dtype, DIM>> forces_;
-    std::vector<Vec<dtype, DIM>> velocities_;
+    std::vector<Position> positions_;
+    std::vector<Force> forces_;
+    std::vector<Velocity> velocities_;
     std::string_view particleType_;
 };
 }

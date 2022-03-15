@@ -165,10 +165,10 @@ public:
         std::future<R> future = task_promise->get_future();
         push_task([task, args..., task_promise] {
             try {
-                if constexpr(sizeof...(args) > 0) {
+                if constexpr(!std::is_same_v<R, void>) {
                     task_promise->set_value(task(args...));
                 } else {
-                    task();
+                    task(args...);
                     task_promise->set_value();
                 }
             }

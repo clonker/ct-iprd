@@ -23,6 +23,12 @@ struct Vec {
         return data[pos];
     }
 
+    bool operator==(const Vec &rhs) const {
+        return data == rhs.data;
+    }
+
 };
+
+
 
 }
