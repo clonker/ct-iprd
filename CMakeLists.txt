@@ -27,3 +27,5 @@ add_library(ct-iprd::ct-iprd ALIAS ${PROJECT_NAME})
 if(CT_IPRD_BUILD_TESTS)
     add_subdirectory(tests)
 endif()
+
+add_subdirectory(examples)
