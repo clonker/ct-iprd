@@ -9,5 +9,4 @@ TEST_CASE("Neighbor list sanity", "[neighbor_list]") {
     std::array<float, 2> gridSize {5, 5};
     ctiprd::nl::NeighborList<2, true, float> nl {gridSize, 1., pool};
 
-    ctiprd::
 }

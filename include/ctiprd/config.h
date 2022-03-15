@@ -8,15 +8,13 @@
 namespace ctiprd::config {
 
 using ThreadPool = bsho::thread_pool;
+template<typename Pool = ThreadPool>
+using PoolPtr = std::shared_ptr<Pool>;
 
 template<typename Pool>
-auto threadGranularity(const Pool &pool) {
-    return 2 * pool.size();
-}
-
-template<typename Pool>
-auto threadGranularity(std::shared_ptr<Pool> pool) {
-    return 2 * pool->size();
+auto threadGranularity(PoolPtr<Pool> pool) {
+    static auto res = 2 * pool->size();
+    return res;
 }
 
 }
