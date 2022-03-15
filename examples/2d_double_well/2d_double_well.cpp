@@ -12,11 +12,11 @@ using dtype = float;
 using Collection = ctiprd::ParticleCollection<DIM, dtype>;
 
 struct DoubleWell2D {
-    [[nodiscard]] dtype energy(const Collection::Position &x) const {
+    [[nodiscard]] static constexpr dtype energy(const Collection::Position &x) {
         return (x[0] * x[0] - static_cast<dtype>(1)) * (x[0] * x[0] - static_cast<dtype>(1)) + x[1] * x[1];
     }
 
-    [[nodiscard]] Collection::Force f(const Collection::Position &x) const {
+    [[nodiscard]] static constexpr Collection::Force f(const Collection::Position &x) {
         return {-4 * x[0] * x[0] * x[0] + 4 * x[0], -2 * x[1]};
     }
 

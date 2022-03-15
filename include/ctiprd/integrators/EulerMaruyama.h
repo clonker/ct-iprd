@@ -1,21 +1,21 @@
 #pragma once
 
 #include <ctiprd/util/distribution_utils.h>
+#include <memory>
 
 namespace ctiprd::integrator {
 
-template<typename State, std::size_t DIM, typename Value = double, typename Generator = std::mt19937>
+template<typename ParticleCollection, typename Value = double, typename Generator = std::mt19937>
 class EulerMaruyama {
 public:
 
     static constexpr const char* name = "EulerMaruyama";
 
-    explicit EulerMaruyama(std::int64_t seed = -1) {
-        generator = seed < 0 ? rnd::randomlySeededGenerator<Generator>() : rnd::seededGenerator<Generator>(seed);
+    explicit EulerMaruyama(std::shared_ptr<ParticleCollection> particles) : particles(particles) {
     }
 
     template<typename F, typename Sigma>
-    State eval(F &&f, const Sigma& sigma, double h, std::size_t nSteps, double t0, const State &y0) {
+    void eval(F &&f, const Sigma& sigma, double h, std::size_t nSteps, double t0, const State &y0) {
         auto y = y0;
         auto t = t0;
         auto sqrth = std::sqrt(h);
@@ -55,5 +55,7 @@ private:
 
     Generator generator;
     std::normal_distribution<Value> distribution;
+
+    std::shared_ptr<ParticleCollection> particles;
 };
 }
