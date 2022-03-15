@@ -8,6 +8,7 @@
 #include <atomic>
 #include <thread>
 
+#include <ctiprd/config.h>
 #include <ctiprd/util/ops.h>
 #include <ctiprd/util/Index.h>
 #include <ctiprd/thread/utils.h>
@@ -15,28 +16,11 @@
 
 namespace ctiprd::nl {
 
-namespace detail {
-template<int dim, typename ParticleCollection, typename F, typename Pool>
-void forEachParticle(ParticleCollection &collection, F op, Pool &pool) {
-
-    auto n = collection.nParticles();
-    auto *forces = collection.forces().data();
-    auto *pos = collection.positions();
-
-    #pragma omp parallel for default(none), firstprivate(forces, pos, n, op)
-    for (std::size_t i = 0; i < n; ++i) {
-        op(i, pos + i * dim, forces + i * dim);
-    }
-}
-}
-
-template<int DIM, bool periodic, typename dtype>
+template<int DIM, bool periodic, typename dtype, typename Pool=config::ThreadPool>
 class NeighborList {
 public:
-    NeighborList() : _gridSize() {}
-
-    NeighborList(std::array<dtype, DIM> gridSize, dtype interactionRadius, std::size_t nParticles)
-            : _gridSize(gridSize) {
+    NeighborList(std::array<dtype, DIM> gridSize, dtype interactionRadius, std::shared_ptr<Pool> pool)
+            : _gridSize(gridSize), pool(pool) {
         for (int i = 0; i < DIM; ++i) {
             _cellSize[i] = interactionRadius;
             if (gridSize[i] <= 0) throw std::invalid_argument("grid sizes must be positive.");
@@ -44,10 +28,17 @@ public:
         }
         _index = util::Index<DIM>(nCells);
         head.resize(_index.size());
-        list.resize(nParticles + 1);
     }
 
-    void update(ParticleCollection<DIM, dtype> &collection, int nJobs = 0) {
+    ~NeighborList() = default;
+    NeighborList(const NeighborList&) = delete;
+    NeighborList &operator=(const NeighborList&) = delete;
+
+    NeighborList(NeighborList&&) noexcept = default;
+    NeighborList &operator=(NeighborList&&) noexcept = default;
+
+    void update(ParticleCollection<DIM, dtype> &collection) {
+        list.resize(collection.nParticles() + 1);
         std::fill(std::begin(list), std::end(list), 0);
         std::fill(std::begin(head), std::end(head), thread::copyable_atomic<std::size_t>());
         auto updateOp = [this](std::size_t particleId, dtype *pos, dtype * /*ignore*/) {
@@ -60,45 +51,36 @@ public:
             list[particleId] = currentHead;
         };
 
-        if (nJobs == 1) {
-            for (std::size_t i = 0; i < collection.nParticles(); ++i) {
-                updateOp(i, collection.positions() + DIM * i, nullptr);
-            }
-        } else {
-            if (nJobs == 0) {
-                nJobs = static_cast<decltype(nJobs)>(std::thread::hardware_concurrency());
-            }
-            if (nJobs <= 1) {
-                throw std::logic_error("At this point nJobs should be >= 2");
-            }
-            std::size_t grainSize = collection.nParticles() / nJobs;
-            auto *pptr = collection.positions();
-            std::vector<std::jthread> jobs;
-            for (int i = 0; i < nJobs - 1; ++i) {
-                auto *pptrNext = std::min(pptr + grainSize * DIM,
-                                          collection.positions() + collection.nParticles() * DIM);
-                if (pptr != pptrNext) {
-                    std::size_t idStart = i * grainSize;
-                    jobs.emplace_back([&updateOp, idStart, pptr, pptrNext]() {
-                        auto id = idStart;
-                        for (auto *p = pptr; p != pptrNext; p += DIM, ++id) {
-                            updateOp(id, p, nullptr);
-                        }
-                    });
-                }
-                pptr = pptrNext;
-            }
-            if (pptr != collection.positions() + DIM * collection.nParticles()) {
-                auto pptrNext = collection.positions() + DIM * collection.nParticles();
-                std::size_t idStart = (nJobs - 1) * grainSize;
-                jobs.emplace_back([&updateOp, idStart, pptr, pptrNext]() {
+        auto granularity = threadGranularity(pool);
+        std::size_t grainSize = collection.nParticles() / granularity;
+        auto *pptr = collection.positions();
+        std::vector<std::future<void>> futures;
+        futures.reserve(granularity);
+        for (int i = 0; i < granularity - 1; ++i) {
+            auto *pptrNext = std::min(pptr + grainSize * DIM,
+                                      collection.positions() + collection.nParticles() * DIM);
+            if (pptr != pptrNext) {
+                std::size_t idStart = i * grainSize;
+                futures.push_back(pool->push([&updateOp, idStart, pptr, pptrNext]() {
                     auto id = idStart;
                     for (auto *p = pptr; p != pptrNext; p += DIM, ++id) {
                         updateOp(id, p, nullptr);
                     }
-                });
+                }));
             }
+            pptr = pptrNext;
         }
+        if (pptr != collection.positions() + DIM * collection.nParticles()) {
+            auto pptrNext = collection.positions() + DIM * collection.nParticles();
+            std::size_t idStart = (granularity - 1) * grainSize;
+            futures.push_back(pool->push([&updateOp, idStart, pptr, pptrNext]() {
+                auto id = idStart;
+                for (auto *p = pptr; p != pptrNext; p += DIM, ++id) {
+                    updateOp(id, p, nullptr);
+                }
+            }));
+        }
+        std::for_each(begin(futures), end(futures), [](auto &future) {future.wait();});
     }
 
     typename util::Index<DIM>::GridDims gridPos(const dtype *pos) const {
@@ -167,6 +149,8 @@ private:
     std::vector<std::size_t> list{};
     util::Index<DIM> _index{};
     std::array<std::uint32_t, DIM> nCells{};
+
+    std::shared_ptr<Pool> pool;
 };
 
 }

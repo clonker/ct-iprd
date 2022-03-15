@@ -62,6 +62,36 @@ public:
 
     auto type(std::size_t id) const { return _types[id]; }
 
+    template<typename F, typename Pool>
+    void forEachParticle(F op, Pool &pool) {
+        auto n = nParticles();
+        auto *forces = this->forces().data();
+        auto *pos = positions();
+
+        auto granularity = config::threadGranularity(pool);
+        auto grainSize = n / granularity;
+
+        auto loop = [&op, pos, forces](auto beginIx, auto endIx) {
+            for(std::size_t i = beginIx; i < endIx; ++i) {
+                op(i, pos + i * dim, forces + i * dim);
+            }
+        };
+        std::vector<std::future<void>> futures;
+        futures.reserve(granularity);
+        std::size_t beginIx = 0;
+        for (std::size_t i = 0; i < granularity-1; ++i) {
+            auto endIx = beginIx + grainSize;
+            if(beginIx != endIx) {
+                futures.push_back(pool.push(loop, beginIx, endIx));
+            }
+            beginIx = endIx;
+        }
+        if(beginIx != n) {
+            futures.push_back(pool.push(loop, beginIx, n));
+        }
+        std::for_each(begin(futures), end(futures), [](auto &future) {future.wait();});
+    }
+
 private:
     std::size_t _nParticles{};
     std::vector<dtype> _particles{};
