@@ -5,18 +5,19 @@
 #include <fmt/format.h>
 #include <catch2/catch.hpp>
 #include <ctiprd/thread/ctpl.h>
+#include <ctiprd/thread/bsho.h>
 
-TEST_CASE("Thread pool sanity", "[ctpl]") {
-    ctpl::ThreadPool pool {5};
+TEMPLATE_TEST_CASE("Thread pool sanity", "[pool]", ctpl::thread_pool, bsho::thread_pool) {
+    TestType pool {5};
 
     REQUIRE(pool.size() == 5);
 
-    std::vector<int> vec(10000, 0);
-    std::vector<int> vecRef(10000, 1);
+    std::vector<int> vec(1000, 0);
+    std::vector<int> vecRef(1000, 1);
     std::vector<std::future<void>> futures;
     futures.reserve(vec.size());
     for(std::size_t i = 0; i < vec.size(); ++i) {
-        futures.push_back(pool.push([&vec, loopIndex = i](int threadIdx) {
+        futures.push_back(pool.push([&vec, loopIndex = i] {
             vec[loopIndex] = 1;
             {
                 using namespace std::chrono_literals;
@@ -25,10 +26,6 @@ TEST_CASE("Thread pool sanity", "[ctpl]") {
         }));
     }
     REQUIRE(futures.size() == vec.size());
-
     std::for_each(begin(futures), end(futures), [](auto &future) {future.wait();});
-
-    // REQUIRE_THAT(vec, Catch::Matchers::UnorderedEquals(vecRef));
-
+    REQUIRE_THAT(vec, Catch::Matchers::UnorderedEquals(vecRef));
 }
-
