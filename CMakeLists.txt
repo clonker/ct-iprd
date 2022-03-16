@@ -5,6 +5,10 @@ set(CMAKE_CXX_STANDARD 20)
 
 set(CT_IPRD_BUILD_TESTS OFF CACHE BOOL "Whether to build the c++ unit tests")
 
+include(${CMAKE_SOURCE_DIR}/devtools/cmake/Conan.cmake)
+run_conan()
+include(${CMAKE_CURRENT_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup(TARGETS)
 
 find_package(OpenMP 4)
 if(OpenMP_FOUND)
