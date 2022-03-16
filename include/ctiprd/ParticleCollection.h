@@ -8,6 +8,7 @@
 #include <vector>
 #include <map>
 #include <future>
+#include <optional>
 #include <bitset>
 
 #include <ctiprd/vec.h>
@@ -28,7 +29,7 @@ enum {
 template<int DIM, typename dtype, int flags = particle_collection::usePositions | particle_collection::useForces>
 class ParticleCollection {
 public:
-    using Position = Vec<dtype, DIM>;
+    using Position = std::optional<Vec<dtype, DIM>>;
     using Force = Vec<dtype, DIM>;
     using Velocity = Vec<dtype, DIM>;
 

@@ -1,16 +1,6 @@
 #include <catch2/catch.hpp>
 #include "ctiprd/ParticleCollection.h"
 
-namespace Catch {
-
-template<>
-struct StringMaker<ctiprd::Vec<float, 2>> {
-    static std::string convert( ctiprd::Vec<float, 2> const& value ) {
-        return "[" + std::to_string(value[0]) + ", " + std::to_string(value[1]) + "]";
-    }
-};
-}
-
 TEST_CASE("Particle collection sanity", "[particles]") {
     ctiprd::ParticleCollection<3, float> collection {"A"};
     REQUIRE(collection.dim == 3);
@@ -31,7 +21,7 @@ SCENARIO("Particle collection can have different flags") {
         }
 
         WHEN("Adding a particle") {
-            collection.addParticle({0., 0.});
+            collection.addParticle({{0., 0.}});
             THEN("The size grows") {
                 REQUIRE(collection.nParticles() == 1);
             }
@@ -39,7 +29,7 @@ SCENARIO("Particle collection can have different flags") {
         }
 
         WHEN("Adding multiple particles") {
-            for(int i = 0; i < 1000; ++i) collection.addParticle({0., 0.});
+            for(int i = 0; i < 1000; ++i) collection.addParticle({{0., 0.}});
 
             THEN("The size grows") {
                 REQUIRE(collection.nParticles() == 1000);
@@ -47,8 +37,8 @@ SCENARIO("Particle collection can have different flags") {
 
             WHEN("Modifying the particles") {
                 auto futures = collection.forEachParticle([](std::size_t i, Collection::Position &p, Collection::Force &f) {
-                    p[0] = 55;
-                    p[1] = 22;
+                    (*p)[0] = 55;
+                    (*p)[1] = 22;
 
                     f[0] = 11;
                     f[1] = -11;
@@ -56,10 +46,10 @@ SCENARIO("Particle collection can have different flags") {
                 std::for_each(begin(futures), end(futures), [](auto &f) { f.wait(); });
 
                 THEN("This modification is reflected in the data") {
-                    Collection::ContainerType<Collection::Position> vecRef (1000, {55, 22});
+                    Collection::ContainerType<Collection::Position> vecRef (1000, {{55, 22}});
                     REQUIRE(collection.positions() == vecRef);
 
-                    Collection::ContainerType<Collection::Position> vecRefForces (1000, {11, -11});
+                    Collection::ContainerType<Collection::Force> vecRefForces (1000, {{11, -11}});
                     REQUIRE(collection.forces() == vecRefForces);
                 }
             }
