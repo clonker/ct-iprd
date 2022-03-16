@@ -12,6 +12,7 @@ int main() {
     auto pool = ctiprd::config::make_pool(5);
     auto integrator = System::Integrator{pool};
     integrator.particles()->addParticle({{0., 0.}});
+    integrator.forces();
     integrator.step(1e-3);
     return 0;
 }

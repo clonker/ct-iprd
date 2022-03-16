@@ -31,8 +31,19 @@ public:
         return particles_;
     }
 
+    void forces() {
+        auto workerExternal = [](auto index, const typename Particles::MaybePosition &pos, typename Particles::Force &force) {
+            force = {};
+            if (pos) {
+                std::apply([&pos, &force](auto &&... args) { ((force += args.force(*pos)), ...); }, ExternalPotentials{});
+            }
+        };
+        auto futures = particles_->template forEachParticle(workerExternal, pool_);
+        std::for_each(begin(futures), end(futures), [](auto &f) { f.wait(); });
+    }
+
     void step(double h) {
-        auto worker = [=](auto index, typename Particles::MaybePosition &pos, const typename Particles::Force &force) {
+        auto worker = [h](auto index, typename Particles::MaybePosition &pos, const typename Particles::Force &force) {
             if (pos) {
                 // if the particle exists
                 auto diffusionConstant = static_cast<dtype>(1);
