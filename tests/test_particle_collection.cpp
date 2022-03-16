@@ -16,7 +16,7 @@ TEST_CASE("Particle collection sanity", "[particles]") {
     REQUIRE(collection.dim == 3);
     REQUIRE(collection.containsForces() == true);
     REQUIRE(collection.containsPositions() == true);
-    REQUIRE(collection.containsVelocities() == true);
+    REQUIRE(collection.containsVelocities() == false);
 }
 
 SCENARIO("Particle collection can have different flags") {
@@ -56,11 +56,11 @@ SCENARIO("Particle collection can have different flags") {
                 std::for_each(begin(futures), end(futures), [](auto &f) { f.wait(); });
 
                 THEN("This modification is reflected in the data") {
-                    std::vector<Collection::Position> vecRef (1000, {55, 22});
-                    REQUIRE_THAT(collection.positions(), Catch::Matchers::UnorderedEquals(vecRef));
+                    Collection::ContainerType<Collection::Position> vecRef (1000, {55, 22});
+                    REQUIRE(collection.positions() == vecRef);
 
-                    std::vector<Collection::Position> vecRefForces (1000, {11, -11});
-                    REQUIRE_THAT(collection.forces(), Catch::Matchers::UnorderedEquals(vecRefForces));
+                    Collection::ContainerType<Collection::Position> vecRefForces (1000, {11, -11});
+                    REQUIRE(collection.forces() == vecRefForces);
                 }
             }
         }

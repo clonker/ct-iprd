@@ -32,6 +32,9 @@ public:
     using Force = Vec<dtype, DIM>;
     using Velocity = Vec<dtype, DIM>;
 
+    template<typename T>
+    using ContainerType = std::deque<T>;
+
     static constexpr int dim = DIM;
 
     static constexpr bool containsPositions() { return flags & particle_collection::usePositions; }
@@ -56,40 +59,59 @@ public:
         auto granularity = config::threadGranularity(pool);
         futures.reserve(granularity);
 
-        auto n = nParticles();
-        auto *pos = positions_.data();
-        auto *forces = forces_.data();
-        auto *velocities = velocities_.data();
 
         Vec<dtype, DIM> defaultPosition {};
         Vec<dtype, DIM> defaultForce {};
         Vec<dtype, DIM> defaultVelocity {};
 
-        auto grainSize = n / granularity;
 
-        auto loop = [operation = std::forward<F>(op), pos, forces, velocities](std::size_t beginIx, std::size_t endIx) {
-            for (std::size_t i = beginIx; i < endIx; ++i) {
+        auto loop = [operation = std::forward<F>(op)](
+                auto startIndex,
+                auto beginPositions, auto endPositions,
+                auto itForces, auto itVelocities
+        ) {
+            for(auto itPos = beginPositions; itPos != endPositions; ++itPos, ++startIndex) {
                 if constexpr(containsForces() && containsVelocities()) {
-                    operation(i, *(pos + i), *(forces + i), *(velocities + i));
+                    operation(startIndex, *itPos, *itForces, *itVelocities);
                 } else if constexpr(containsForces() && !containsVelocities()) {
-                    operation(i, *(pos + i), *(forces + i));
+                    operation(startIndex, *itPos, *itForces);
                 } else if constexpr(!containsForces() && containsVelocities()) {
-                    operation(i, *(pos + i), *(velocities + i));
+                    operation(startIndex, *itPos, *itVelocities);
                 } else {
-                    operation(i, *(pos + i));
+                    operation(startIndex, *itPos);
+                }
+
+                if constexpr(containsForces()) {
+                    ++itForces;
+                }
+                if constexpr(containsVelocities()) {
+                    ++itVelocities;
                 }
             }
         };
+
+        auto n = nParticles();
+        auto grainSize = n / granularity;
+        auto itPos = positions_.begin();
+        auto itForces = forces_.begin();
+        auto itVelocities = velocities_.begin();
+
         std::size_t beginIx = 0;
         for (std::size_t i = 0; i < granularity - 1; ++i) {
-            auto endIx = beginIx + grainSize;
-            if (beginIx != endIx) {
-                futures.push_back(pool->push(loop, beginIx, endIx));
+            if (itPos != positions_.end()) {
+                futures.push_back(pool->push(loop, beginIx, itPos, itPos + grainSize, itForces, itVelocities));
             }
-            beginIx = endIx;
+            beginIx += grainSize;
+            itPos += grainSize;
+            if constexpr(containsForces()) {
+                itForces += grainSize;
+            }
+            if constexpr(containsVelocities()) {
+                itVelocities += grainSize;
+            }
         }
-        if (beginIx != n) {
-            futures.push_back(pool->push(loop, beginIx, n));
+        if (itPos != positions_.end()) {
+            futures.push_back(pool->push(loop, beginIx, itPos, positions_.end(), itForces, itVelocities));
         }
 
         return std::move(futures);
@@ -99,18 +121,18 @@ public:
         return particleType_;
     }
 
-    const std::vector<Position> &positions () const {
+    const ContainerType<Position> &positions () const {
         return positions_;
     }
 
-    const std::vector<Force> &forces() const {
+    const ContainerType<Force> &forces() const {
         return forces_;
     }
 
 private:
-    std::vector<Position> positions_;
-    std::vector<Force> forces_;
-    std::vector<Velocity> velocities_;
+    ContainerType<Position> positions_;
+    ContainerType<Force> forces_;
+    ContainerType<Velocity> velocities_;
     std::string_view particleType_;
 };
 }
