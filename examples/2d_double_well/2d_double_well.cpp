@@ -2,8 +2,6 @@
 // Created by mho on 3/15/22.
 //
 
-#include <cmath>
-
 #include <ctiprd/systems/double_well.h>
 
 using System = ctiprd::systems::DoubleWell<float>;
