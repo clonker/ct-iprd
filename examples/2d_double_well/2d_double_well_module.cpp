@@ -19,11 +19,11 @@ PYBIND11_MODULE(dw_mod, m) {
 
         auto pool = ctiprd::config::make_pool(5);
         auto integrator = System::Integrator{pool};
-        for(int n = 0; n < 100; ++n) {
+        for(int n = 0; n < 1000; ++n) {
             integrator.particles()->addParticle({{0., 0.}});
         }
 
-        np_array<float> out {{nSteps, static_cast<std::size_t>(100), static_cast<std::size_t>(2)}};
+        np_array<float> out {{nSteps, static_cast<std::size_t>(1000), static_cast<std::size_t>(2)}};
 
         for(std::size_t t = 0; t < nSteps; ++t) {
             integrator.forces();

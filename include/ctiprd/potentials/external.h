@@ -19,7 +19,6 @@ struct DoubleWell {
     [[nodiscard]] constexpr Force force(const Position &x) const {
         return {{-4 * x[0] * x[0] * x[0] + 4 * x[0], -2 * x[1]}};
     }
-
 };
 
 }

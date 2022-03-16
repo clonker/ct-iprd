@@ -15,7 +15,7 @@ auto &normalDistribution() {
 }
 
 template<int DIM, typename dtype, typename ExternalPotentials, typename PairPotentials,
-         typename Pool = config::ThreadPool,typename Generator = std::mt19937>
+         typename Pool = config::ThreadPool, typename Generator = std::mt19937>
 class EulerMaruyama {
 public:
 
