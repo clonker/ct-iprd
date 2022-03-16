@@ -12,6 +12,7 @@ template <typename T> concept arithmetic = std::is_arithmetic_v<T>;
 
 template<typename dtype, int DIM>
 struct Vec {
+    static constexpr int dim = DIM;
     using data_type = std::array<dtype, DIM>;
     using size_type = typename data_type::size_type;
     using reference = typename data_type::reference;

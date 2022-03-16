@@ -21,6 +21,6 @@ struct DoubleWell {
     using ExternalPotentials = std::tuple<potential::external::DoubleWell<State, State>>;
     using PairPotentials = std::tuple<>;
 
-    using Integrator = integrator::EulerMaruyama<2, T, ExternalPotentials, PairPotentials>;
+    using Integrator = integrator::EulerMaruyama<State::dim, T, ExternalPotentials, PairPotentials>;
 };
 }
