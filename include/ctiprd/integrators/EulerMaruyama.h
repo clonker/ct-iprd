@@ -2,19 +2,22 @@
 
 #include <ctiprd/util/distribution_utils.h>
 #include <memory>
+#include <ctiprd/ParticleCollection.h>
 
 namespace ctiprd::integrator {
 
-template<typename ParticleCollection, typename Value = double, typename Generator = std::mt19937>
+template<int DIM, typename dtype, typename ExternalPotentials, typename PairPotentials, typename Generator = std::mt19937>
 class EulerMaruyama {
 public:
 
+    using Particles = ParticleCollection<DIM, dtype>;
+
     static constexpr const char* name = "EulerMaruyama";
 
-    explicit EulerMaruyama(std::shared_ptr<ParticleCollection> particles) : particles(particles) {
+    explicit EulerMaruyama(std::shared_ptr<> particles) : particles(particles) {
     }
 
-    template<typename F, typename Sigma>
+    /*template<typename F, typename Sigma>
     void eval(F &&f, const Sigma& sigma, double h, std::size_t nSteps, double t0, const State &y0) {
         auto y = y0;
         auto t = t0;
@@ -41,17 +44,17 @@ public:
             }
         }
         return out;
-    }
+    }*/
 
 private:
 
-    State noise() {
+    /*State noise() {
         State out;
         std::generate(begin(out), end(out), [this](){
             return distribution(generator);
         });
         return out;
-    }
+    }*/
 
     Generator generator;
     std::normal_distribution<Value> distribution;
