@@ -6,59 +6,58 @@
 
 namespace ctiprd::integrator {
 
-template<int DIM, typename dtype, typename ExternalPotentials, typename PairPotentials, typename Generator = std::mt19937>
+namespace detail {
+template <typename dtype>
+auto &normalDistribution() {
+    static thread_local std::normal_distribution<dtype> distribution {};
+    return distribution;
+}
+}
+
+template<int DIM, typename dtype, typename ExternalPotentials, typename PairPotentials,
+         typename Pool = config::ThreadPool,typename Generator = std::mt19937>
 class EulerMaruyama {
 public:
 
     using Particles = ParticleCollection<DIM, dtype>;
-
     static constexpr const char* name = "EulerMaruyama";
 
-    explicit EulerMaruyama(std::shared_ptr<> particles) : particles(particles) {
+    static constexpr int nExternalPotentials = std::tuple_size_v<ExternalPotentials>;
+    static constexpr int nPairPotentials = std::tuple_size_v<PairPotentials>;
+
+    explicit EulerMaruyama(config::PoolPtr<Pool> pool) : particles_(std::make_shared<Particles>("A")), pool_(pool) { }
+
+    std::shared_ptr<Particles> particles() const {
+        return particles_;
     }
 
-    /*template<typename F, typename Sigma>
-    void eval(F &&f, const Sigma& sigma, double h, std::size_t nSteps, double t0, const State &y0) {
-        auto y = y0;
-        auto t = t0;
-        auto sqrth = std::sqrt(h);
-        for (std::size_t i = 0; i < nSteps; ++i) {
-            y = step(f, h, sqrth, t, y, sigma);
-            t += h;
-        }
-
-        return y;
-    }
-
-    template<typename F, typename Sigma>
-    State step(F &&f, double h, double sqrth, double t, const State &y, const Sigma &sigma) {
-        auto mu = f(t, y);
-        auto w = noise(); // evaluate Wiener processes
-        auto out = y;
-
-        for (std::size_t j = 0; j < DIM; ++j) {
-            out[j] += h * mu[j];
-
-            for (std::size_t k = 0; k < DIM; ++k) {
-                out[j] += sigma[j][k] * sqrth * w[k];
+    void step(double h) {
+        auto worker = [=](auto index, typename Particles::MaybePosition &pos, const typename Particles::Force &force) {
+            if (pos) {
+                // if the particle exists
+                auto diffusionConstant = static_cast<dtype>(1);
+                auto kbt = static_cast<dtype>(1);
+                auto deterministicDisplacement = force * diffusionConstant * h / kbt;
+                auto randomDisplacement = noise() * std::sqrt(2 * diffusionConstant * h);
+                *pos += deterministicDisplacement + randomDisplacement;
             }
-        }
-        return out;
-    }*/
+        };
+
+        auto futures = particles_->template forEachParticle(worker, pool_);
+        std::for_each(begin(futures), end(futures), [](auto &f) { f.wait(); });
+    }
 
 private:
 
-    /*State noise() {
-        State out;
-        std::generate(begin(out), end(out), [this](){
-            return distribution(generator);
+    static typename Particles::Position noise() {
+        typename Particles::Position out;
+        std::generate(begin(out.data), end(out.data), [](){
+            return detail::normalDistribution<dtype>()(rnd::staticThreadLocalGenerator<Generator>());
         });
         return out;
-    }*/
+    }
 
-    Generator generator;
-    std::normal_distribution<Value> distribution;
-
-    std::shared_ptr<ParticleCollection> particles;
+    std::shared_ptr<Particles> particles_;
+    config::PoolPtr<Pool> pool_;
 };
 }

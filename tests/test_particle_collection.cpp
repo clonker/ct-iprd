@@ -36,7 +36,7 @@ SCENARIO("Particle collection can have different flags") {
             }
 
             WHEN("Modifying the particles") {
-                auto futures = collection.forEachParticle([](std::size_t i, Collection::Position &p, Collection::Force &f) {
+                auto futures = collection.forEachParticle([](std::size_t i, Collection::MaybePosition &p, Collection::Force &f) {
                     (*p)[0] = 55;
                     (*p)[1] = 22;
 
@@ -46,7 +46,7 @@ SCENARIO("Particle collection can have different flags") {
                 std::for_each(begin(futures), end(futures), [](auto &f) { f.wait(); });
 
                 THEN("This modification is reflected in the data") {
-                    Collection::ContainerType<Collection::Position> vecRef (1000, {{55, 22}});
+                    Collection::ContainerType<Collection::MaybePosition> vecRef (1000, {{55, 22}});
                     REQUIRE(collection.positions() == vecRef);
 
                     Collection::ContainerType<Collection::Force> vecRefForces (1000, {{11, -11}});

@@ -6,6 +6,10 @@
 
 namespace ctiprd {
 
+namespace detail {
+template <typename T> concept arithmetic = std::is_arithmetic_v<T>;
+}
+
 template<typename dtype, int DIM>
 struct Vec {
     using data_type = std::array<dtype, DIM>;
@@ -25,6 +29,52 @@ struct Vec {
 
     bool operator==(const Vec &rhs) const {
         return data == rhs.data;
+    }
+
+    Vec& operator+=(const Vec &other) {
+        for(size_type i = 0; i < DIM; ++i) data[i] += other[i];
+        return *this;
+    }
+
+    template<typename T>
+    Vec& operator+=(T arg) requires detail::arithmetic<T> {
+        for(size_type i = 0; i < DIM; ++i) data[i] += arg;
+        return *this;
+    }
+
+    template<typename T>
+    Vec& operator-=(T arg) requires detail::arithmetic<T> {
+        for(size_type i = 0; i < DIM; ++i) data[i] -= arg;
+        return *this;
+    }
+
+    template<typename T>
+    Vec& operator*=(T arg) requires detail::arithmetic<T> {
+        for(size_type i = 0; i < DIM; ++i) data[i] *= arg;
+        return *this;
+    }
+
+    template<typename T>
+    Vec& operator/=(T arg) requires detail::arithmetic<T> {
+        for(size_type i = 0; i < DIM; ++i) data[i] /= arg;
+        return *this;
+    }
+
+    template<typename T>
+    friend Vec operator*(Vec lhs, T rhs) requires detail::arithmetic<T> {
+        lhs *= rhs;
+        return lhs;
+    }
+
+    template<typename T>
+    friend Vec operator/(Vec lhs, T rhs) requires detail::arithmetic<T> {
+        lhs /= rhs;
+        return lhs;
+    }
+
+    friend Vec operator+(Vec lhs, const Vec &rhs) {
+        lhs += rhs;
+        return lhs;
     }
 
 };

@@ -29,7 +29,8 @@ enum {
 template<int DIM, typename dtype, int flags = particle_collection::usePositions | particle_collection::useForces>
 class ParticleCollection {
 public:
-    using Position = std::optional<Vec<dtype, DIM>>;
+    using Position = Vec<dtype, DIM>;
+    using MaybePosition = std::optional<Position>;
     using Force = Vec<dtype, DIM>;
     using Velocity = Vec<dtype, DIM>;
 
@@ -122,7 +123,7 @@ public:
         return particleType_;
     }
 
-    const ContainerType<Position> &positions () const {
+    const ContainerType<MaybePosition> &positions () const {
         return positions_;
     }
 
@@ -131,7 +132,7 @@ public:
     }
 
 private:
-    ContainerType<Position> positions_;
+    ContainerType<MaybePosition> positions_;
     ContainerType<Force> forces_;
     ContainerType<Velocity> velocities_;
     std::string_view particleType_;
