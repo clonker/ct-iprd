@@ -15,15 +15,15 @@ using np_array = py::array_t<dtype, py::array::c_style | py::array::forcecast>;
 
 PYBIND11_MODULE(dw_mod, m) {
     m.def("simulate", [] () {
-        std::size_t nSteps = 10000;
+        std::size_t nSteps = 100000;
 
         auto pool = ctiprd::config::make_pool(3);
         auto integrator = System::Integrator{pool};
-        for(int n = 0; n < 1000; ++n) {
+        for(int n = 0; n < 10000; ++n) {
             integrator.particles()->addParticle({{0., 0.}});
         }
 
-        np_array<float> out {{nSteps, static_cast<std::size_t>(1000), static_cast<std::size_t>(2)}};
+        np_array<float> out {{nSteps, static_cast<std::size_t>(10000), static_cast<std::size_t>(2)}};
 
         for(std::size_t t = 0; t < nSteps; ++t) {
             integrator.step(1e-3);
