@@ -36,9 +36,9 @@ SCENARIO("Particle collection can have different flags") {
             }
 
             WHEN("Modifying the particles") {
-                auto futures = collection.forEachParticle([](std::size_t i, Collection::MaybePosition &p, Collection::Force &f) {
-                    (*p)[0] = 55;
-                    (*p)[1] = 22;
+                auto futures = collection.forEachParticle([](std::size_t i, Collection::Position &p, Collection::Force &f) {
+                    p[0] = 55;
+                    p[1] = 22;
 
                     f[0] = 11;
                     f[1] = -11;

@@ -6,6 +6,7 @@
 
 #include <type_traits>
 #include <complex>
+#include <cassert>
 #include <numeric>
 
 namespace ctiprd::util {

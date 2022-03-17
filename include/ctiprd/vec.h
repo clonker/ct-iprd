@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <numeric>
+
 namespace ctiprd {
 
 namespace detail {
