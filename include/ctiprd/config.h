@@ -4,6 +4,7 @@
 #pragma once
 
 #include <ctiprd/thread/bsho.h>
+#include <ctiprd/thread/ctpl.h>
 
 namespace ctiprd::config {
 
@@ -18,7 +19,7 @@ static auto make_pool(int n) {
 
 template<typename Pool>
 auto threadGranularity(PoolPtr<Pool> pool) {
-    static auto res = 2 * pool->size();
+    static auto res = pool->size();
     return res;
 }
 

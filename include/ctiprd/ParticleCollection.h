@@ -37,6 +37,8 @@ public:
     template<typename T>
     using ContainerType = std::deque<T>;
 
+    using size_type = typename ContainerType<MaybePosition>::size_type;
+
     static constexpr int dim = DIM;
 
     static constexpr bool containsPositions() { return flags & particle_collection::usePositions; }
@@ -51,8 +53,12 @@ public:
 
     void addParticle(const Position &position) {
         positions_.push_back(position);
-        forces_.template emplace_back();
-        velocities_.template emplace_back();
+        if constexpr(containsForces()) {
+            forces_.template emplace_back();
+        }
+        if constexpr(containsVelocities()) {
+            velocities_.template emplace_back();
+        }
     }
 
     template<typename F, typename Pool>
@@ -61,26 +67,22 @@ public:
         auto granularity = config::threadGranularity(pool);
         futures.reserve(granularity);
 
-
-        Vec<dtype, DIM> defaultPosition {};
-        Vec<dtype, DIM> defaultForce {};
-        Vec<dtype, DIM> defaultVelocity {};
-
-
         auto loop = [operation = std::forward<F>(op)](
                 auto startIndex,
-                auto beginPositions, auto endPositions,
+                const auto &beginPositions, const auto &endPositions,
                 auto itForces, auto itVelocities
         ) {
             for(auto itPos = beginPositions; itPos != endPositions; ++itPos, ++startIndex) {
-                if constexpr(containsForces() && containsVelocities()) {
-                    operation(startIndex, *itPos, *itForces, *itVelocities);
-                } else if constexpr(containsForces() && !containsVelocities()) {
-                    operation(startIndex, *itPos, *itForces);
-                } else if constexpr(!containsForces() && containsVelocities()) {
-                    operation(startIndex, *itPos, *itVelocities);
-                } else {
-                    operation(startIndex, *itPos);
+                if(*itPos) {
+                    if constexpr(containsForces() && containsVelocities()) {
+                        operation(startIndex, **itPos, *itForces, *itVelocities);
+                    } else if constexpr(containsForces() && !containsVelocities()) {
+                        operation(startIndex, **itPos, *itForces);
+                    } else if constexpr(!containsForces() && containsVelocities()) {
+                        operation(startIndex, **itPos, *itVelocities);
+                    } else {
+                        operation(startIndex, **itPos);
+                    }
                 }
 
                 if constexpr(containsForces()) {
@@ -129,6 +131,14 @@ public:
 
     const ContainerType<Force> &forces() const {
         return forces_;
+    }
+
+    const Position &position(size_type index) const {
+        return *positions_[index];
+    }
+
+    const Force &force(size_type index) const {
+        return forces_[index];
     }
 
 private:

@@ -17,7 +17,7 @@ PYBIND11_MODULE(dw_mod, m) {
     m.def("simulate", [] () {
         std::size_t nSteps = 10000;
 
-        auto pool = ctiprd::config::make_pool(5);
+        auto pool = ctiprd::config::make_pool(3);
         auto integrator = System::Integrator{pool};
         for(int n = 0; n < 1000; ++n) {
             integrator.particles()->addParticle({{0., 0.}});
@@ -26,12 +26,11 @@ PYBIND11_MODULE(dw_mod, m) {
         np_array<float> out {{nSteps, static_cast<std::size_t>(1000), static_cast<std::size_t>(2)}};
 
         for(std::size_t t = 0; t < nSteps; ++t) {
-            integrator.forces();
             integrator.step(1e-3);
 
             const auto &positions = integrator.particles()->positions();
             auto i = 0;
-            for(const auto &pos : positions) {
+            for (const auto &pos: positions) {
                 out.mutable_at(t, i, 0) = (*pos)[0];
                 out.mutable_at(t, i, 1) = (*pos)[1];
                 ++i;

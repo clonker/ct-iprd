@@ -56,7 +56,7 @@ public:
      * @brief Destruct the thread pool. Waits for all tasks to complete, then destroys all threads. Note that if the variable paused is set to true, then any tasks still in the queue will never be executed.
      */
     ~thread_pool() {
-        wait_for_tasks();
+        waitForTasks();
         running = false;
         destroy_threads();
     }
@@ -139,11 +139,11 @@ public:
     void reset(const ui32 &_thread_count = std::thread::hardware_concurrency()) {
         bool was_paused = paused;
         paused = true;
-        wait_for_tasks();
+        waitForTasks();
         running = false;
         destroy_threads();
         thread_count = _thread_count ? _thread_count : std::thread::hardware_concurrency();
-        threads.reset(new std::thread[thread_count]);
+        threads = std::make_unique<std::thread[]>(thread_count);
         paused = was_paused;
         running = true;
         create_threads();
@@ -186,7 +186,7 @@ public:
     /**
      * @brief Wait for tasks to be completed. Normally, this function waits for all tasks, both those that are currently running in the threads and those that are still waiting in the queue. However, if the variable paused is set to true, this function only waits for the currently running tasks (otherwise it would wait forever). To wait for a specific task, use submit() instead, and call the wait() member function of the generated future.
      */
-    void wait_for_tasks() {
+    void waitForTasks() {
         while (true) {
             if (!paused) {
                 if (tasks_total == 0)

@@ -4,21 +4,25 @@
 #pragma once
 
 #include <cstddef>
+#include <cmath>
 
 namespace ctiprd::potential::external {
 
-template<typename Position, typename Force>
+template<typename dtype>
 struct DoubleWell {
 
     static constexpr std::size_t DIM = 2;
+    using State = Vec<dtype, DIM>;
 
-    [[nodiscard]] constexpr auto energy(const Position &x) const {
-        return (x[0] * x[0] - 1.) * (x[0] * x[0] - 1.) + x[1] * x[1];
+    [[nodiscard]] constexpr auto energy(const State &x) const {
+        return k*(x[0] * x[0] - 1.) * (x[0] * x[0] - 1.) + k*x[1] * x[1];
     }
 
-    [[nodiscard]] constexpr Force force(const Position &x) const {
-        return {{-4 * x[0] * x[0] * x[0] + 4 * x[0], -2 * x[1]}};
+    [[nodiscard]] constexpr State force(const State &x) const {
+        return {{-4 * k * x[0] * x[0] * x[0] + 4 * k * x[0], -2 * k * x[1]}};
     }
+
+    dtype k {1.};
 };
 
 }

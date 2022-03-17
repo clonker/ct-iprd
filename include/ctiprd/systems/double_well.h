@@ -11,6 +11,7 @@
 #include <ctiprd/vec.h>
 #include <ctiprd/integrators/EulerMaruyama.h>
 #include <ctiprd/potentials/external.h>
+#include <ctiprd/potentials/interaction.h>
 
 namespace ctiprd::systems {
 
@@ -19,9 +20,11 @@ struct DoubleWell {
     using State = Vec<T, 2>;
 
     using ExternalPotentials = std::tuple<
-            potential::external::DoubleWell<State, State>
+            potential::external::DoubleWell<T>
     >;
-    using PairPotentials = std::tuple<>;
+    using PairPotentials = std::tuple<
+            potential::pair::HarmonicRepulsion<T>
+    >;
 
     using Integrator = integrator::EulerMaruyama<State::dim, T, ExternalPotentials, PairPotentials>;
 };

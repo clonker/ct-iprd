@@ -14,9 +14,9 @@ template<typename dtype, int DIM>
 struct Vec {
     static constexpr int dim = DIM;
     using data_type = std::array<dtype, DIM>;
+    using value_type = typename data_type::value_type;
     using size_type = typename data_type::size_type;
     using reference = typename data_type::reference;
-    using value_type = typename data_type::value_type;
     using const_reference = typename data_type::const_reference ;
     data_type data;
 
@@ -32,6 +32,10 @@ struct Vec {
         return data == rhs.data;
     }
 
+    value_type normSquared() const {
+        return std::inner_product(begin(data), end(data), begin(data), static_cast<value_type>(0));
+    }
+
     Vec& operator+=(const Vec &other) {
         for(size_type i = 0; i < DIM; ++i) data[i] += other[i];
         return *this;
@@ -40,6 +44,11 @@ struct Vec {
     template<typename T>
     Vec& operator+=(T arg) requires detail::arithmetic<T> {
         for(size_type i = 0; i < DIM; ++i) data[i] += arg;
+        return *this;
+    }
+
+    Vec& operator-=(const Vec &other) {
+        for(size_type i = 0; i < DIM; ++i) data[i] -= other[i];
         return *this;
     }
 
@@ -68,6 +77,12 @@ struct Vec {
     }
 
     template<typename T>
+    friend Vec operator*(T rhs, Vec lhs) requires detail::arithmetic<T> {
+        lhs *= rhs;
+        return lhs;
+    }
+
+    template<typename T>
     friend Vec operator/(Vec lhs, T rhs) requires detail::arithmetic<T> {
         lhs /= rhs;
         return lhs;
@@ -75,6 +90,11 @@ struct Vec {
 
     friend Vec operator+(Vec lhs, const Vec &rhs) {
         lhs += rhs;
+        return lhs;
+    }
+
+    friend Vec operator-(Vec lhs, const Vec &rhs) {
+        lhs -= rhs;
         return lhs;
     }
 

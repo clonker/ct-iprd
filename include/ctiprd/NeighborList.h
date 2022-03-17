@@ -37,12 +37,12 @@ public:
     NeighborList(NeighborList&&) noexcept = default;
     NeighborList &operator=(NeighborList&&) noexcept = default;
 
-    void update(ParticleCollection<DIM, dtype> &collection) {
-        list.resize(collection.nParticles() + 1);
+    void update(std::shared_ptr<ParticleCollection<DIM, dtype>> collection) {
+        list.resize(collection->nParticles() + 1);
         std::fill(std::begin(list), std::end(list), 0);
         std::fill(std::begin(head), std::end(head), thread::copyable_atomic<std::size_t>());
-        auto updateOp = [this](std::size_t particleId, dtype *pos, dtype * /*ignore*/) {
-            auto boxId = positionToBoxIx(pos);
+        auto updateOp = [this](std::size_t particleId, const auto &pos, const auto &/*ignore*/) {
+            auto boxId = positionToBoxIx(&pos.data[0]);
 
             // CAS
             auto &atomic = *head.at(boxId);
@@ -51,36 +51,8 @@ public:
             list[particleId] = currentHead;
         };
 
-        auto granularity = threadGranularity(pool);
-        std::size_t grainSize = collection.nParticles() / granularity;
-        auto *pptr = collection.positions();
-        std::vector<std::future<void>> futures;
-        futures.reserve(granularity);
-        for (int i = 0; i < granularity - 1; ++i) {
-            auto *pptrNext = std::min(pptr + grainSize * DIM,
-                                      collection.positions() + collection.nParticles() * DIM);
-            if (pptr != pptrNext) {
-                std::size_t idStart = i * grainSize;
-                futures.push_back(pool->push([&updateOp, idStart, pptr, pptrNext]() {
-                    auto id = idStart;
-                    for (auto *p = pptr; p != pptrNext; p += DIM, ++id) {
-                        updateOp(id, p, nullptr);
-                    }
-                }));
-            }
-            pptr = pptrNext;
-        }
-        if (pptr != collection.positions() + DIM * collection.nParticles()) {
-            auto pptrNext = collection.positions() + DIM * collection.nParticles();
-            std::size_t idStart = (granularity - 1) * grainSize;
-            futures.push_back(pool->push([&updateOp, idStart, pptr, pptrNext]() {
-                auto id = idStart;
-                for (auto *p = pptr; p != pptrNext; p += DIM, ++id) {
-                    updateOp(id, p, nullptr);
-                }
-            }));
-        }
-        std::for_each(begin(futures), end(futures), [](auto &future) {future.wait();});
+        collection->template forEachParticle(updateOp, pool);
+        pool->waitForTasks();
     }
 
     typename util::Index<DIM>::GridDims gridPos(const dtype *pos) const {
@@ -99,9 +71,9 @@ public:
     }
 
     template<typename F>
-    void forEachNeighbor(std::size_t id, ParticleCollection<DIM, dtype> &collection, F fun) const {
-        auto *pos = collection.position(id);
-        auto gridPos = this->gridPos(pos);
+    void forEachNeighbor(std::size_t id, ParticleCollection<DIM, dtype> &collection, F &&fun) const {
+        const auto &pos = collection.position(id);
+        auto gridPos = this->gridPos(&pos[0]);
         for (int i = 0u; i < DIM; ++i) {
             std::uint32_t begin, end;
             if constexpr(!periodic) {
@@ -127,7 +99,7 @@ public:
             }
         }
         {
-            auto boxId = positionToBoxIx(pos);
+            auto boxId = positionToBoxIx(&pos[0]);
             auto neighborId = (*head.at(boxId)).load();
             while (neighborId != 0) {
                 if (neighborId != id) {
