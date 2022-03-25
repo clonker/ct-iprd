@@ -11,8 +11,11 @@
 
 namespace ctiprd::potential::pair {
 
-template<typename dtype>
+template<typename dtype, std::size_t type1, std::size_t type2>
 struct HarmonicRepulsion {
+
+    static constexpr std::size_t particleType1 = type1;
+    static constexpr std::size_t particleType2 = type2;
 
     static constexpr std::size_t DIM = 2;
     using State = Vec<dtype, DIM>;
