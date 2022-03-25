@@ -92,7 +92,8 @@ public:
                     auto cellId = _index.index(cellPos);
                     auto neighborId = (*head.at(cellId)).load();
                     while (neighborId != 0) {
-                        fun(neighborId, collection.position(neighborId), collection.force(neighborId));
+                        fun(neighborId, collection.position(neighborId), collection.typeOf(neighborId),
+                            collection.force(neighborId));
                         neighborId = list.at(neighborId);
                     }
                 }
@@ -103,7 +104,8 @@ public:
             auto neighborId = (*head.at(boxId)).load();
             while (neighborId != 0) {
                 if (neighborId != id) {
-                    fun(neighborId, collection.position(neighborId), collection.force(neighborId));
+                    fun(neighborId, collection.position(neighborId), collection.typeOf(neighborId),
+                        collection.force(neighborId));
                 }
                 neighborId = list.at(neighborId);
             }

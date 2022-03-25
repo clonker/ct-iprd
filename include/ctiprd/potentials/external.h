@@ -6,7 +6,7 @@
 #include <cstddef>
 #include <cmath>
 
-namespace ctiprd::potential::external {
+namespace ctiprd::potentials::external {
 
 template<typename dtype, std::size_t typeId>
 struct DoubleWell {
@@ -14,14 +14,23 @@ struct DoubleWell {
     constexpr static std::size_t particleType = typeId;
 
     static constexpr std::size_t DIM = 2;
-    using State = Vec<dtype, DIM>;
 
-    [[nodiscard]] constexpr auto energy(const State &x) const {
-        return k*(x[0] * x[0] - 1.) * (x[0] * x[0] - 1.) + k*x[1] * x[1];
+    template<typename State, typename ParticleType>
+    [[nodiscard]] constexpr auto energy(const State &x, const ParticleType &type) const {
+        if (type == particleType) {
+            return k*(x[0] * x[0] - 1.) * (x[0] * x[0] - 1.) + k*x[1] * x[1];
+        } else {
+            return static_cast<dtype>(0);
+        }
     }
 
-    [[nodiscard]] constexpr State force(const State &x) const {
-        return {{-4 * k * x[0] * x[0] * x[0] + 4 * k * x[0], -2 * k * x[1]}};
+    template<typename State, typename ParticleType>
+    [[nodiscard]] constexpr State force(const State &x, const ParticleType &type) const {
+        if (type == particleType) {
+            return {{-4 * k * x[0] * x[0] * x[0] + 4 * k * x[0], -2 * k * x[1]}};
+        } else {
+            return {};
+        }
     }
 
     dtype k {1.};

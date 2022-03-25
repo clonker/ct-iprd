@@ -63,6 +63,10 @@ public:
         particleTypes_.push_back(systems::particleTypeId<System::types>(type));
     }
 
+    [[nodiscard]] ParticleType typeOf(std::size_t ix) const {
+        return particleTypes_[ix];
+    }
+
     template<typename F, typename Pool>
     std::vector<std::future<void>> forEachParticle(F &&op, config::PoolPtr<Pool> pool) {
         std::vector<std::future<void>> futures;
