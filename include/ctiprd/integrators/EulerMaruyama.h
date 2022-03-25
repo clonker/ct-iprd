@@ -5,6 +5,7 @@
 #include <ctiprd/util/distribution_utils.h>
 #include <ctiprd/ParticleCollection.h>
 #include <ctiprd/NeighborList.h>
+#include <ctiprd/potentials/util.h>
 
 namespace ctiprd::integrator {
 
@@ -43,7 +44,8 @@ public:
 
     void step(double h) {
         if(!neighborList_) {
-            neighborList_ = std::make_unique<NeighborList>(System::boxSize, .5, pool_);
+            auto cutoff = potentials::cutoff<dtype>(pairPotentials_);
+            neighborList_ = std::make_unique<NeighborList>(System::boxSize, cutoff, pool_);
         }
         neighborList_->update(particles_);
         auto worker = [
