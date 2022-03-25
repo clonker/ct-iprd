@@ -12,7 +12,6 @@
 #include <ctiprd/util/ops.h>
 #include <ctiprd/util/Index.h>
 #include <ctiprd/thread/utils.h>
-#include <ctiprd/ParticleCollection.h>
 
 namespace ctiprd::nl {
 
@@ -37,7 +36,8 @@ public:
     NeighborList(NeighborList&&) noexcept = default;
     NeighborList &operator=(NeighborList&&) noexcept = default;
 
-    void update(std::shared_ptr<ParticleCollection<DIM, dtype>> collection) {
+    template<typename ParticleCollection>
+    void update(std::shared_ptr<ParticleCollection> collection) {
         list.resize(collection->nParticles() + 1);
         std::fill(std::begin(list), std::end(list), 0);
         std::fill(std::begin(head), std::end(head), thread::copyable_atomic<std::size_t>());
@@ -70,8 +70,8 @@ public:
         return boxId;
     }
 
-    template<typename F>
-    void forEachNeighbor(std::size_t id, ParticleCollection<DIM, dtype> &collection, F &&fun) const {
+    template<typename ParticleCollection, typename F>
+    void forEachNeighbor(std::size_t id, ParticleCollection &collection, F &&fun) const {
         const auto &pos = collection.position(id);
         auto gridPos = this->gridPos(&pos[0]);
         for (int i = 0u; i < DIM; ++i) {

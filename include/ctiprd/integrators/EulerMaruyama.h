@@ -27,7 +27,7 @@ public:
     using ExternalPotentials = typename System::ExternalPotentials;
     using PairPotentials = typename System::PairPotentials;
 
-    using Particles = ParticleCollection<DIM, dtype>;
+    using Particles = ParticleCollection<System>;
     using NeighborList = nl::NeighborList<DIM, false, dtype, Pool>;
     static constexpr const char* name = "EulerMaruyama";
 
@@ -35,7 +35,7 @@ public:
     static constexpr int nPairPotentials = std::tuple_size_v<PairPotentials>;
 
     explicit EulerMaruyama(config::PoolPtr<Pool> pool) :
-        particles_(std::make_shared<Particles>("A")), pool_(pool), externalPotentials_(), pairPotentials_() {
+        particles_(std::make_shared<Particles>()), pool_(pool), externalPotentials_(), pairPotentials_() {
     }
 
     std::shared_ptr<Particles> particles() const {

@@ -20,7 +20,7 @@ PYBIND11_MODULE(dw_mod, m) {
         auto pool = ctiprd::config::make_pool(3);
         auto integrator = ctiprd::integrator::EulerMaruyama<System>{pool};
         for(int n = 0; n < 10000; ++n) {
-            integrator.particles()->addParticle({{0., 0.}});
+            integrator.particles()->addParticle({{0., 0.}}, "A");
         }
 
         np_array<float> out {{nSteps, static_cast<std::size_t>(10000), static_cast<std::size_t>(2)}};

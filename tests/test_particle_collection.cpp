@@ -1,9 +1,12 @@
 #include <catch2/catch.hpp>
+#include <ctiprd/systems/double_well.h>
 #include "ctiprd/ParticleCollection.h"
 
+using System = ctiprd::systems::DoubleWell<float>;
+
 TEST_CASE("Particle collection sanity", "[particles]") {
-    ctiprd::ParticleCollection<3, float> collection {"A"};
-    REQUIRE(collection.dim == 3);
+    ctiprd::ParticleCollection<System> collection {};
+    REQUIRE(collection.dim == 2);
     REQUIRE(collection.containsForces() == true);
     REQUIRE(collection.containsPositions() == true);
     REQUIRE(collection.containsVelocities() == false);
@@ -11,9 +14,9 @@ TEST_CASE("Particle collection sanity", "[particles]") {
 
 SCENARIO("Particle collection can have different flags") {
     auto pool = ctiprd::config::make_pool(5);
-    using Collection = ctiprd::ParticleCollection<2, float>;
+    using Collection = ctiprd::ParticleCollection<System>;
     GIVEN("A particle collection with default flags") {
-        Collection collection {"A"};
+        Collection collection {};
         THEN("the flags are set up correctly") {
             REQUIRE(collection.containsForces() == true);
             REQUIRE(collection.containsPositions() == true);
@@ -21,7 +24,7 @@ SCENARIO("Particle collection can have different flags") {
         }
 
         WHEN("Adding a particle") {
-            collection.addParticle({{0., 0.}});
+            collection.addParticle({{0., 0.}}, "A");
             THEN("The size grows") {
                 REQUIRE(collection.nParticles() == 1);
             }
@@ -29,7 +32,7 @@ SCENARIO("Particle collection can have different flags") {
         }
 
         WHEN("Adding multiple particles") {
-            for(int i = 0; i < 1000; ++i) collection.addParticle({{0., 0.}});
+            for(int i = 0; i < 1000; ++i) collection.addParticle({{0., 0.}}, "A");
 
             THEN("The size grows") {
                 REQUIRE(collection.nParticles() == 1000);
@@ -57,7 +60,7 @@ SCENARIO("Particle collection can have different flags") {
     }
 
     GIVEN("A particle collection with just positions") {
-        ctiprd::ParticleCollection<3, float, ctiprd::particle_collection::usePositions> collection {"A"};
+        ctiprd::ParticleCollection<System, ctiprd::particle_collection::usePositions> collection {};
         THEN("the flags are set up correctly") {
             REQUIRE(collection.containsForces() == false);
             REQUIRE(collection.containsPositions() == true);
@@ -66,7 +69,7 @@ SCENARIO("Particle collection can have different flags") {
     }
 
     GIVEN("A particle collection with positions and velocities") {
-        ctiprd::ParticleCollection<3, float, ctiprd::particle_collection::usePositions | ctiprd::particle_collection::useVelocities> collection {"A"};
+        ctiprd::ParticleCollection<System, ctiprd::particle_collection::usePositions | ctiprd::particle_collection::useVelocities> collection {};
         THEN("the flags are set up correctly") {
             REQUIRE(collection.containsForces() == false);
             REQUIRE(collection.containsPositions() == true);

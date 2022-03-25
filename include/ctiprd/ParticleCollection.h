@@ -13,6 +13,7 @@
 
 #include <ctiprd/vec.h>
 #include <ctiprd/config.h>
+#include "ctiprd/systems/util.h"
 
 namespace ctiprd {
 
@@ -24,13 +25,17 @@ enum {
 };
 }
 
-template<int DIM, typename dtype, int flags = particle_collection::usePositions | particle_collection::useForces>
+template<typename System, int flags = particle_collection::usePositions | particle_collection::useForces>
 class ParticleCollection {
 public:
+    using dtype = typename System::dtype;
+    static constexpr std::size_t DIM = System::DIM;
+
     using Position = Vec<dtype, DIM>;
     using MaybePosition = std::optional<Position>;
     using Force = Vec<dtype, DIM>;
     using Velocity = Vec<dtype, DIM>;
+    using ParticleType = std::size_t;
 
     template<typename T>
     using ContainerType = std::deque<T>;
@@ -43,13 +48,11 @@ public:
     static constexpr bool containsForces() { return flags & particle_collection::useForces; }
     static constexpr bool containsVelocities() { return flags & particle_collection::useVelocities; }
 
-    explicit ParticleCollection(std::string_view particleType) : particleType_(particleType) {}
-
     [[nodiscard]] std::size_t nParticles() const {
         return positions_.size();
     }
 
-    void addParticle(const Position &position) {
+    void addParticle(const Position &position, const char* type) {
         positions_.push_back(position);
         if constexpr(containsForces()) {
             forces_.template emplace_back();
@@ -57,6 +60,7 @@ public:
         if constexpr(containsVelocities()) {
             velocities_.template emplace_back();
         }
+        particleTypes_.push_back(systems::particleTypeId<System::types>(type));
     }
 
     template<typename F, typename Pool>
@@ -119,10 +123,6 @@ public:
         return std::move(futures);
     }
 
-    [[nodiscard]] std::string_view particleType() const {
-        return particleType_;
-    }
-
     const ContainerType<MaybePosition> &positions () const {
         return positions_;
     }
@@ -143,6 +143,6 @@ private:
     ContainerType<MaybePosition> positions_;
     ContainerType<Force> forces_;
     ContainerType<Velocity> velocities_;
-    std::string_view particleType_;
+    ContainerType<ParticleType> particleTypes_;
 };
 }
