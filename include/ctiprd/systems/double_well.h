@@ -32,18 +32,16 @@ struct DoubleWell {
                 .name = "B",
                 .diffusionConstant = 1.
             },
-            {
-                .name = "C",
-                .diffusionConstant = 55.
-            }
     }};
 
     using ExternalPotentials = std::tuple<
-            potentials::external::DoubleWell<T, particleTypeId<types>("B")>,
-            potentials::external::DoubleWell<T, particleTypeId<types>("C")>
+            potentials::external::DoubleWell<T, particleTypeId<types>("A")>,
+            potentials::external::DoubleWell<T, particleTypeId<types>("B")>
     >;
     using PairPotentials = std::tuple<
-            potentials::pair::HarmonicRepulsion<T, particleTypeId<types>("A"), particleTypeId<types>("B")>
+            potentials::pair::HarmonicRepulsion<T, particleTypeId<types>("A"), particleTypeId<types>("A")>,
+            potentials::pair::HarmonicRepulsion<T, particleTypeId<types>("A"), particleTypeId<types>("B")>,
+            potentials::pair::HarmonicRepulsion<T, particleTypeId<types>("B"), particleTypeId<types>("B")>
     >;
 };
 }
