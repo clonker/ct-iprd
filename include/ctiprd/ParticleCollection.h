@@ -16,8 +16,6 @@
 
 namespace ctiprd {
 
-using ParticleType = std::uint32_t;
-
 namespace particle_collection {
 enum {
     usePositions = 0b001,
