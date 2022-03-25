@@ -48,6 +48,8 @@ public:
             neighborList_ = std::make_unique<NeighborList>(System::boxSize, cutoff, pool_);
         }
         neighborList_->update(particles_);
+        forces();
+
         auto worker = [
                 h,
                 &pot = externalPotentials_,
@@ -58,16 +60,8 @@ public:
                 (auto id, typename Particles::Position &pos, const typename Particles::ParticleType &type,
                         typename Particles::Force &force) {
 
-            force = {};
-            std::apply([&pos, &force](auto &&... args) { ((force += args.force(pos)), ...); }, pot);
-
-            nl->template forEachNeighbor(id, data, [&pos, &force, &potPair](auto neighborId, const auto &neighborPos, const auto &neighborForce) {
-                std::apply([&pos, &force, &neighborPos](auto &&... args) { ((force += args.force(pos, neighborPos)), ...); }, potPair);
-            });
-
-            auto diffusionConstant = static_cast<dtype>(1);
-            auto kbt = static_cast<dtype>(1);
-            auto deterministicDisplacement = force * diffusionConstant * h / kbt;
+            const auto &diffusionConstant = System::types[type].diffusionConstant;
+            auto deterministicDisplacement = force * diffusionConstant * h;
             auto randomDisplacement = noise() * std::sqrt(2 * diffusionConstant * h);
             pos += deterministicDisplacement + randomDisplacement;
         };
@@ -86,6 +80,31 @@ public:
     }
 
 private:
+
+    void forces() {
+        auto worker = [
+                &pot = externalPotentials_,
+                &potPair = pairPotentials_,
+                nl = neighborList_.get(),
+                &data = *particles_
+        ]
+                (auto id, typename Particles::Position &pos, const typename Particles::ParticleType &type,
+                 typename Particles::Force &force) {
+
+            std::fill(begin(force.data), end(force.data), static_cast<dtype>(0));
+            // force = {};
+            std::apply([&pos, &force](auto &&... args) { ((force += args.force(pos)), ...); }, pot);
+
+            nl->template forEachNeighbor(id, data, [&pos, &force, &potPair](auto neighborId, const auto &neighborPos,
+                                                                            const auto &neighborForce) {
+                std::apply([&pos, &force, &neighborPos](auto &&... args) {
+                    ((force += args.force(pos, neighborPos)), ...);
+                }, potPair);
+            });
+        };
+        particles_->template forEachParticle(worker, pool_);
+        pool_->waitForTasks();
+    }
 
     static typename Particles::Position noise() {
         typename Particles::Position out;
