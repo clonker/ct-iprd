@@ -13,6 +13,7 @@
 #include <ctiprd/potentials/external.h>
 #include <ctiprd/potentials/interaction.h>
 #include <ctiprd/ParticleTypes.h>
+#include <ctiprd/systems/util.h>
 
 namespace ctiprd::systems {
 
@@ -22,7 +23,7 @@ struct DoubleWell {
     static constexpr std::size_t DIM = 2;
     static constexpr std::array<T, DIM> boxSize {5., 5.};
 
-    static constexpr ParticleTypes<dtype, 2> types {
+    static constexpr ParticleTypes<dtype, 3> types {{
             {
                 .name = "A",
                 .diffusionConstant = 1.
@@ -30,11 +31,16 @@ struct DoubleWell {
             {
                 .name = "B",
                 .diffusionConstant = 1.
+            },
+            {
+                .name = "C",
+                .diffusionConstant = 55.
             }
-    };
+    }};
 
     using ExternalPotentials = std::tuple<
-            potential::external::DoubleWell<T>
+            potential::external::DoubleWell<T, particleTypeId<types>("B")>,
+            potential::external::DoubleWell<T, particleTypeId<types>("C")>
     >;
     using PairPotentials = std::tuple<
             potential::pair::HarmonicRepulsion<T>

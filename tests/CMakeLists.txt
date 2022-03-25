@@ -1,6 +1,6 @@
 project(ct-iprd-tests)
 
-set(TEST_SRC test_sanity.cpp test_thread_pool.cpp test_particle_collection.cpp)
+set(TEST_SRC test_sanity.cpp test_thread_pool.cpp test_particle_collection.cpp test_system.cpp)
 add_executable(tests catch_main.cpp ${TEST_SRC})
 set_target_properties(tests PROPERTIES CXX_VISIBILITY_PRESET hidden)
 

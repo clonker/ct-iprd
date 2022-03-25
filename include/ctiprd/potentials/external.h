@@ -8,8 +8,10 @@
 
 namespace ctiprd::potential::external {
 
-template<typename dtype>
+template<typename dtype, std::size_t typeId>
 struct DoubleWell {
+
+    constexpr static std::size_t particleType = typeId;
 
     static constexpr std::size_t DIM = 2;
     using State = Vec<dtype, DIM>;

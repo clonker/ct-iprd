@@ -9,20 +9,15 @@
 
 namespace ctiprd::systems {
 
-template<const char* name, typename ParticleTypes>
-struct ParticleTypeId {
-
-};
-
-template<auto types>
+template<auto &types>
 static constexpr std::size_t particleTypeId(std::string_view name) {
     std::size_t i = 0;
-    std::for_each(begin(types), end(types), [name] (auto t){
-        if constexpr(t.name == name) {
-
+    for(auto it = begin(types); it != end(types); ++it, ++i) {
+        if (it->name == name) {
+            break;
         }
-    });
-    return 0;
+    }
+    return i;
 }
 
 }
