@@ -19,9 +19,9 @@ struct HarmonicRepulsion {
 
     dtype energy(const State &x1, const State &x2) const {
         auto dSquared = (x2 - x1).normSquared();
-        if (dSquared < interactionDistance * interactionDistance) {
+        if (dSquared < cutoff * cutoff) {
             auto d = std::sqrt(dSquared);
-            d -= interactionDistance;
+            d -= cutoff;
             return static_cast<dtype>(0.5) * d * d * forceConstant;
         }
         return 0;
@@ -30,15 +30,15 @@ struct HarmonicRepulsion {
     State force(const State &x1, const State &x2) const {
         auto xij = x2 - x1;
         auto dSquared = xij.normSquared();
-        if (dSquared < interactionDistance * interactionDistance && dSquared > 0) {
+        if (dSquared < cutoff * cutoff && dSquared > 0) {
             auto d = std::sqrt(dSquared);
-            return (forceConstant * (d - interactionDistance)) / d * xij;
+            return (forceConstant * (d - cutoff)) / d * xij;
         } else {
             return {};
         }
     }
 
-    dtype interactionDistance{1.};
+    dtype cutoff{1.};
     dtype forceConstant{1.};
 };
 }

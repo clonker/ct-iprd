@@ -16,10 +16,15 @@ auto &normalDistribution() {
 }
 }
 
-template<int DIM, typename dtype, typename ExternalPotentials, typename PairPotentials,
+template<typename System,
          typename Pool = config::ThreadPool, typename Generator = std::mt19937>
 class EulerMaruyama {
 public:
+
+    static constexpr std::size_t DIM = System::DIM;
+    using dtype = typename System::dtype;
+    using ExternalPotentials = typename System::ExternalPotentials;
+    using PairPotentials = typename System::PairPotentials;
 
     using Particles = ParticleCollection<DIM, dtype>;
     using NeighborList = nl::NeighborList<DIM, false, dtype, Pool>;
@@ -29,9 +34,7 @@ public:
     static constexpr int nPairPotentials = std::tuple_size_v<PairPotentials>;
 
     explicit EulerMaruyama(config::PoolPtr<Pool> pool) :
-        particles_(std::make_shared<Particles>("A")), pool_(pool), externalPotentials_(), pairPotentials_(),
-        neighborList_({5., 5.}, .5, pool)
-    {
+        particles_(std::make_shared<Particles>("A")), pool_(pool), externalPotentials_(), pairPotentials_() {
     }
 
     std::shared_ptr<Particles> particles() const {
@@ -39,12 +42,15 @@ public:
     }
 
     void step(double h) {
-        neighborList_.update(particles_);
+        if(!neighborList_) {
+            neighborList_ = std::make_unique<NeighborList>(System::boxSize, .5, pool_);
+        }
+        neighborList_->update(particles_);
         auto worker = [
                 h,
                 &pot = externalPotentials_,
                 &potPair = pairPotentials_,
-                &nl = neighborList_,
+                nl = neighborList_.get(),
                 &data = *particles_
                         ]
                 (auto id, typename Particles::Position &pos, typename Particles::Force &force) {
@@ -52,7 +58,7 @@ public:
             force = {};
             std::apply([&pos, &force](auto &&... args) { ((force += args.force(pos)), ...); }, pot);
 
-            nl.template forEachNeighbor(id, data, [&pos, &force, &potPair](auto neighborId, const auto &neighborPos, const auto &neighborForce) {
+            nl->template forEachNeighbor(id, data, [&pos, &force, &potPair](auto neighborId, const auto &neighborPos, const auto &neighborForce) {
                 std::apply([&pos, &force, &neighborPos](auto &&... args) { ((force += args.force(pos, neighborPos)), ...); }, potPair);
             });
 
@@ -65,6 +71,15 @@ public:
 
         particles_->template forEachParticle(worker, pool_);
         pool_->waitForTasks();
+    }
+
+    void setExternalPotentials(const ExternalPotentials &potentials) {
+        externalPotentials_ = potentials;
+    }
+
+    void setPairPotentials(const PairPotentials &potentials) {
+        pairPotentials_ = potentials;
+        neighborList_.reset();
     }
 
 private:
@@ -82,6 +97,6 @@ private:
 
     ExternalPotentials externalPotentials_;
     PairPotentials pairPotentials_;
-    NeighborList neighborList_;
+    std::unique_ptr<NeighborList> neighborList_;
 };
 }

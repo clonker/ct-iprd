@@ -17,7 +17,10 @@ namespace ctiprd::systems {
 
 template<typename T>
 struct DoubleWell {
-    using State = Vec<T, 2>;
+    using dtype = T;
+    static constexpr std::size_t DIM = 2;
+    using State = Vec<T, DIM>;
+    static constexpr std::array<T, DIM> boxSize {5., 5.};
 
     using ExternalPotentials = std::tuple<
             potential::external::DoubleWell<T>
@@ -25,7 +28,5 @@ struct DoubleWell {
     using PairPotentials = std::tuple<
             potential::pair::HarmonicRepulsion<T>
     >;
-
-    using Integrator = integrator::EulerMaruyama<State::dim, T, ExternalPotentials, PairPotentials>;
 };
 }
