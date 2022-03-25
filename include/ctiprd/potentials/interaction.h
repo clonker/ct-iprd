@@ -11,7 +11,7 @@
 
 namespace ctiprd::potentials::pair {
 
-template<typename dtype, std::size_t type1, std::size_t type2>
+template<typename dtype, bool allTypes, std::size_t type1=0, std::size_t type2=0>
 struct HarmonicRepulsion {
 
     static constexpr std::size_t particleType1 = type1;
@@ -19,18 +19,20 @@ struct HarmonicRepulsion {
 
     template<typename State, typename ParticleType>
     dtype energy(const State &x1, const ParticleType &t1, const State &x2, const ParticleType &t2) const {
-        auto dSquared = (x2 - x1).normSquared();
-        if (dSquared < cutoff * cutoff) {
-            auto d = std::sqrt(dSquared);
-            d -= cutoff;
-            return static_cast<dtype>(0.5) * d * d * forceConstant;
+        if(allTypes || potentialApplicable<HarmonicRepulsion>(t1, t2)) {
+            auto dSquared = (x2 - x1).normSquared();
+            if (dSquared < cutoff * cutoff) {
+                auto d = std::sqrt(dSquared);
+                d -= cutoff;
+                return static_cast<dtype>(0.5) * d * d * forceConstant;
+            }
         }
         return 0;
     }
 
     template<typename State, typename ParticleType>
     State force(const State &x1, const ParticleType &t1, const State &x2, const ParticleType &t2) const {
-        if (potentialApplicable<HarmonicRepulsion>(t1, t2)) {
+        if (allTypes || potentialApplicable<HarmonicRepulsion>(t1, t2)) {
             auto xij = x2 - x1;
             auto dSquared = xij.normSquared();
             if (dSquared < cutoff * cutoff && dSquared > 0) {

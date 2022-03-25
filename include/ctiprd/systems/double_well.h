@@ -35,13 +35,11 @@ struct DoubleWell {
     }};
 
     using ExternalPotentials = std::tuple<
-            potentials::external::DoubleWell<T, particleTypeId<types>("A")>,
-            potentials::external::DoubleWell<T, particleTypeId<types>("B")>
+            potentials::external::DoubleWell<T, false, particleTypeId<types>("A")>,
+            potentials::external::DoubleWell<T, false, particleTypeId<types>("B")>
     >;
     using PairPotentials = std::tuple<
-            potentials::pair::HarmonicRepulsion<T, particleTypeId<types>("A"), particleTypeId<types>("A")>,
-            potentials::pair::HarmonicRepulsion<T, particleTypeId<types>("A"), particleTypeId<types>("B")>,
-            potentials::pair::HarmonicRepulsion<T, particleTypeId<types>("B"), particleTypeId<types>("B")>
+            potentials::pair::HarmonicRepulsion<T, true>
     >;
 };
 }

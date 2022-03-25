@@ -5,6 +5,7 @@
 #include <pybind11/numpy.h>
 
 #include <ctiprd/systems/double_well.h>
+#include <ctiprd/progressbar.hpp>
 
 namespace py = pybind11;
 
@@ -23,8 +24,9 @@ PYBIND11_MODULE(dw_mod, m) {
             integrator.particles()->addParticle({{0., 0.}}, "A");
         }
 
-        np_array<float> out {{nSteps, static_cast<std::size_t>(10000), static_cast<std::size_t>(2)}};
+        np_array<float> out {{nSteps, static_cast<std::size_t>(integrator.particles()->nParticles()), static_cast<std::size_t>(2)}};
 
+        progressbar bar(nSteps);
         for(std::size_t t = 0; t < nSteps; ++t) {
             integrator.step(1e-3);
 
@@ -36,6 +38,7 @@ PYBIND11_MODULE(dw_mod, m) {
                 ++i;
             }
 
+            bar.update();
         }
 
         return out;
