@@ -55,7 +55,8 @@ public:
                 nl = neighborList_.get(),
                 &data = *particles_
                         ]
-                (auto id, typename Particles::Position &pos, typename Particles::Force &force) {
+                (auto id, typename Particles::Position &pos, const typename Particles::ParticleType &type,
+                        typename Particles::Force &force) {
 
             force = {};
             std::apply([&pos, &force](auto &&... args) { ((force += args.force(pos)), ...); }, pot);

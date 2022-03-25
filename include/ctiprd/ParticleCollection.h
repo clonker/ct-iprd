@@ -72,18 +72,18 @@ public:
         auto loop = [operation = std::forward<F>(op)](
                 auto startIndex,
                 const auto &beginPositions, const auto &endPositions,
-                auto itForces, auto itVelocities
+                auto itTypes, auto itForces, auto itVelocities
         ) {
             for(auto itPos = beginPositions; itPos != endPositions; ++itPos, ++startIndex) {
                 if(*itPos) {
                     if constexpr(containsForces() && containsVelocities()) {
-                        operation(startIndex, **itPos, *itForces, *itVelocities);
+                        operation(startIndex, **itPos, *itTypes, *itForces, *itVelocities);
                     } else if constexpr(containsForces() && !containsVelocities()) {
-                        operation(startIndex, **itPos, *itForces);
+                        operation(startIndex, **itPos, *itTypes, *itForces);
                     } else if constexpr(!containsForces() && containsVelocities()) {
-                        operation(startIndex, **itPos, *itVelocities);
+                        operation(startIndex, **itPos, *itTypes, *itVelocities);
                     } else {
-                        operation(startIndex, **itPos);
+                        operation(startIndex, **itPos, *itTypes);
                     }
                 }
 
@@ -99,16 +99,18 @@ public:
         auto n = nParticles();
         auto grainSize = n / granularity;
         auto itPos = positions_.begin();
+        auto itTypes = particleTypes_.begin();
         auto itForces = forces_.begin();
         auto itVelocities = velocities_.begin();
 
         std::size_t beginIx = 0;
         for (std::size_t i = 0; i < granularity - 1; ++i) {
             if (itPos != positions_.end()) {
-                futures.push_back(pool->push(loop, beginIx, itPos, itPos + grainSize, itForces, itVelocities));
+                futures.push_back(pool->push(loop, beginIx, itPos, itPos + grainSize, itTypes, itForces, itVelocities));
             }
             beginIx += grainSize;
             itPos += grainSize;
+            itTypes += grainSize;
             if constexpr(containsForces()) {
                 itForces += grainSize;
             }
@@ -117,7 +119,7 @@ public:
             }
         }
         if (itPos != positions_.end()) {
-            futures.push_back(pool->push(loop, beginIx, itPos, positions_.end(), itForces, itVelocities));
+            futures.push_back(pool->push(loop, beginIx, itPos, positions_.end(), itTypes, itForces, itVelocities));
         }
 
         return std::move(futures);

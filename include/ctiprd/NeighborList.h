@@ -41,7 +41,7 @@ public:
         list.resize(collection->nParticles() + 1);
         std::fill(std::begin(list), std::end(list), 0);
         std::fill(std::begin(head), std::end(head), thread::copyable_atomic<std::size_t>());
-        auto updateOp = [this](std::size_t particleId, const auto &pos, const auto &/*ignore*/) {
+        auto updateOp = [this](std::size_t particleId, const auto &pos, const auto &/*ignore*/, const auto&/*noe*/) {
             auto boxId = positionToBoxIx(&pos.data[0]);
 
             // CAS
