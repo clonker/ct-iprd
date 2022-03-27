@@ -21,7 +21,7 @@ struct ForceField {
 
     static constexpr int nExternalPotentials = std::tuple_size_v<ExternalPotentials>;
     static constexpr int nPairPotentials = std::tuple_size_v<PairPotentials>;
-    using NeighborList = nl::NeighborList<DIM, false, dtype>;
+    using NeighborList = nl::NeighborList<DIM, System::periodic, dtype>;
 
     void setExternalPotentials(const ExternalPotentials &potentials) {
         externalPotentials_ = potentials;

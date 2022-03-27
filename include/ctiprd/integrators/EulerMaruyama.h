@@ -7,6 +7,7 @@
 #include <ctiprd/NeighborList.h>
 #include <ctiprd/potentials/util.h>
 #include <ctiprd/potentials/ForceField.h>
+#include <ctiprd/reactions/UncontrolledApproximation.h>
 
 namespace ctiprd::integrator {
 

@@ -26,6 +26,12 @@ Generator &staticThreadLocalGenerator() {
     return generator;
 }
 
+template<typename RealType, typename Generator = std::mt19937>
+RealType uniform_real(const RealType a = 0.0, const RealType b = 1.0) {
+    std::uniform_real_distribution<RealType> distribution(a, b);
+    return distribution(staticThreadLocalGenerator<Generator>());
+}
+
 template<typename RealType>
 class dirichlet_distribution {
 public:

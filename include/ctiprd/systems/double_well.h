@@ -22,7 +22,8 @@ template<typename T>
 struct DoubleWell {
     using dtype = T;
     static constexpr std::size_t DIM = 2;
-    static constexpr std::array<T, DIM> boxSize {5., 5.};
+    static constexpr std::array<T, DIM> boxSize {5., 5.}; // todo this should probably go into the integrator? or elsewhere? (for working w/ thermostat)
+    static constexpr bool periodic = true;
 
     static constexpr ParticleTypes<dtype, 3> types {{
             {
