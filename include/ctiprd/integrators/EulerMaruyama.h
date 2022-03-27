@@ -67,7 +67,7 @@ public:
             pos += deterministicDisplacement + randomDisplacement;
         };
 
-        particles_->template forEachParticle(worker, pool_);
+        particles_->forEachParticle(worker, pool_);
         pool_->waitForTasks();
     }
 
@@ -97,14 +97,14 @@ private:
                 ((force += args.force(pos, type)), ...);
             }, pot);
 
-            nl->template forEachNeighbor(id, data, [&pos, &type, &force, &potPair](auto neighborId, const auto &neighborPos, const auto &neighborType,
+            nl->forEachNeighbor(id, data, [&pos, &type, &force, &potPair](auto neighborId, const auto &neighborPos, const auto &neighborType,
                                                                             const auto &neighborForce) {
                 std::apply([&pos, &type, &force, &neighborPos, &neighborType](auto &&... args) {
                     ((force += args.force(pos, type, neighborPos, neighborType)), ...);
                 }, potPair);
             });
         };
-        particles_->template forEachParticle(worker, pool_);
+        particles_->forEachParticle(worker, pool_);
         pool_->waitForTasks();
     }
 

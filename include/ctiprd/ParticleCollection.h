@@ -55,7 +55,7 @@ public:
     void addParticle(const Position &position, const char* type) {
         positions_.push_back(position);
         if constexpr(containsForces()) {
-            forces_.template emplace_back();
+            forces_.emplace_back();
         }
         if constexpr(containsVelocities()) {
             velocities_.template emplace_back();

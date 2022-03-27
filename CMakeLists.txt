@@ -16,7 +16,7 @@ if(OpenMP_FOUND)
 endif()
 
 if(MSVC)
-    add_compile_options(/W3 /EHsc /bigobj /permissive- /std:c++17)
+    add_compile_options(/W3 /EHsc /bigobj /permissive-)
 endif()
 
 find_package(pybind11 REQUIRED)

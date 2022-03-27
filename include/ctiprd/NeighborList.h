@@ -51,7 +51,7 @@ public:
             list[particleId] = currentHead;
         };
 
-        collection->template forEachParticle(updateOp, pool);
+        collection->forEachParticle(updateOp, pool);
         pool->waitForTasks();
     }
 
