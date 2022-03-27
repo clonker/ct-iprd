@@ -45,22 +45,46 @@ public:
     static constexpr int dim = DIM;
 
     static constexpr bool containsPositions() { return flags & particle_collection::usePositions; }
+
     static constexpr bool containsForces() { return flags & particle_collection::useForces; }
+
     static constexpr bool containsVelocities() { return flags & particle_collection::useVelocities; }
 
     [[nodiscard]] std::size_t nParticles() const {
         return positions_.size();
     }
 
-    void addParticle(const Position &position, const char* type) {
-        positions_.push_back(position);
-        if constexpr(containsForces()) {
-            forces_.emplace_back();
+    template<typename T>
+    void addParticle(const Position &position, T &&type) requires std::convertible_to<T, std::string_view> {
+        addParticle(position, systems::particleTypeId<System::types>(type));
+    }
+
+    void addParticle(const Position &position, std::size_t type) {
+        if (blanks.empty()) {
+            positions_.push_back(position);
+            if constexpr(containsForces()) {
+                forces_.emplace_back();
+            }
+            if constexpr(containsVelocities()) {
+                velocities_.emplace_back();
+            }
+            particleTypes_.push_back(type);
+        } else {
+            auto ix = blanks.back();
+            positions_[ix] = position;
+            if constexpr(containsForces()) {
+                forces_[ix] = {};
+            }
+            if constexpr(containsVelocities()) {
+                velocities_[ix] = {};
+            }
+            particleTypes_[ix] = type;
+            blanks.pop_back();
         }
-        if constexpr(containsVelocities()) {
-            velocities_.template emplace_back();
-        }
-        particleTypes_.push_back(systems::particleTypeId<System::types>(type));
+    }
+
+    void removeParticle(size_type index) {
+        positions_[index].reset();
     }
 
     [[nodiscard]] ParticleType typeOf(std::size_t ix) const {
@@ -78,8 +102,8 @@ public:
                 const auto &beginPositions, const auto &endPositions,
                 auto itTypes, auto itForces, auto itVelocities
         ) {
-            for(auto itPos = beginPositions; itPos != endPositions; ++itPos, ++startIndex) {
-                if(*itPos) {
+            for (auto itPos = beginPositions; itPos != endPositions; ++itPos, ++startIndex) {
+                if (*itPos) {
                     if constexpr(containsForces() && containsVelocities()) {
                         operation(startIndex, **itPos, *itTypes, *itForces, *itVelocities);
                     } else if constexpr(containsForces() && !containsVelocities()) {
@@ -129,7 +153,7 @@ public:
         return std::move(futures);
     }
 
-    const ContainerType<MaybePosition> &positions () const {
+    const ContainerType<MaybePosition> &positions() const {
         return positions_;
     }
 
@@ -150,5 +174,6 @@ private:
     ContainerType<Force> forces_;
     ContainerType<Velocity> velocities_;
     ContainerType<ParticleType> particleTypes_;
+    std::vector<size_type> blanks;
 };
 }
