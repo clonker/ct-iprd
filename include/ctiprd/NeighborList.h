@@ -15,11 +15,11 @@
 
 namespace ctiprd::nl {
 
-template<int DIM, bool periodic, typename dtype, typename Pool=config::ThreadPool>
+template<int DIM, bool periodic, typename dtype>
 class NeighborList {
 public:
-    NeighborList(std::array<dtype, DIM> gridSize, dtype interactionRadius, std::shared_ptr<Pool> pool)
-            : _gridSize(gridSize), pool(pool) {
+    NeighborList(std::array<dtype, DIM> gridSize, dtype interactionRadius)
+            : _gridSize(gridSize) {
         for (int i = 0; i < DIM; ++i) {
             _cellSize[i] = interactionRadius;
             if (gridSize[i] <= 0) throw std::invalid_argument("grid sizes must be positive.");
@@ -36,8 +36,8 @@ public:
     NeighborList(NeighborList&&) noexcept = default;
     NeighborList &operator=(NeighborList&&) noexcept = default;
 
-    template<typename ParticleCollection>
-    void update(std::shared_ptr<ParticleCollection> collection) {
+    template<typename ParticleCollection, typename Pool>
+    void update(std::shared_ptr<ParticleCollection> collection, std::shared_ptr<Pool> pool) {
         list.resize(collection->nParticles() + 1);
         std::fill(std::begin(list), std::end(list), 0);
         std::fill(std::begin(head), std::end(head), thread::copyable_atomic<std::size_t>());
@@ -123,8 +123,6 @@ private:
     std::vector<std::size_t> list{};
     util::Index<DIM> _index{};
     std::array<std::uint32_t, DIM> nCells{};
-
-    std::shared_ptr<Pool> pool;
 };
 
 }

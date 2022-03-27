@@ -6,6 +6,7 @@
 #include <ctiprd/ParticleCollection.h>
 #include <ctiprd/NeighborList.h>
 #include <ctiprd/potentials/util.h>
+#include <ctiprd/potentials/ForceField.h>
 
 namespace ctiprd::integrator {
 
@@ -18,25 +19,19 @@ auto &normalDistribution() {
 
 }
 
-template<typename System,
-        typename Pool = config::ThreadPool, typename Generator = std::mt19937>
+template<typename System, typename Pool = config::ThreadPool, typename Generator = std::mt19937,
+         typename ForceField = potentials::ForceField<System>>
 class EulerMaruyama {
 public:
 
     static constexpr std::size_t DIM = System::DIM;
     using dtype = typename System::dtype;
-    using ExternalPotentials = typename System::ExternalPotentials;
-    using PairPotentials = typename System::PairPotentials;
 
     using Particles = ParticleCollection<System>;
-    using NeighborList = nl::NeighborList<DIM, false, dtype, Pool>;
     static constexpr const char *name = "EulerMaruyama";
 
-    static constexpr int nExternalPotentials = std::tuple_size_v<ExternalPotentials>;
-    static constexpr int nPairPotentials = std::tuple_size_v<PairPotentials>;
-
     explicit EulerMaruyama(config::PoolPtr<Pool> pool) :
-            particles_(std::make_shared<Particles>()), pool_(pool), externalPotentials_(), pairPotentials_() {
+            particles_(std::make_shared<Particles>()), pool_(pool), forceField(std::make_unique<ForceField>()) {
     }
 
     std::shared_ptr<Particles> particles() const {
@@ -44,19 +39,10 @@ public:
     }
 
     void step(double h) {
-        if (!neighborList_) {
-            auto cutoff = potentials::cutoff<dtype>(pairPotentials_);
-            neighborList_ = std::make_unique<NeighborList>(System::boxSize, cutoff, pool_);
-        }
-        neighborList_->update(particles_);
-        forces();
 
-        auto worker = [
-                h,
-                &pot = externalPotentials_,
-                &potPair = pairPotentials_,
-                &data = *particles_
-        ]
+        forceField->forces(particles_, pool_);
+
+        auto worker = [h, &data = *particles_ ]
                 (auto id, typename Particles::Position &pos, const typename Particles::ParticleType &type,
                  typename Particles::Force &force) {
 
@@ -70,42 +56,9 @@ public:
         pool_->waitForTasks();
     }
 
-    void setExternalPotentials(const ExternalPotentials &potentials) {
-        externalPotentials_ = potentials;
-    }
 
-    void setPairPotentials(const PairPotentials &potentials) {
-        pairPotentials_ = potentials;
-        neighborList_.reset();
-    }
 
 private:
-
-    void forces() {
-        auto worker = [
-                &pot = externalPotentials_,
-                &potPair = pairPotentials_,
-                nl = neighborList_.get(),
-                &data = *particles_
-        ]
-                (auto id, typename Particles::Position &pos, const typename Particles::ParticleType &type,
-                 typename Particles::Force &force) {
-
-            std::fill(begin(force.data), end(force.data), static_cast<dtype>(0));
-            std::apply([&pos, &type, &force](auto &&... args) {
-                ((force += args.force(pos, type)), ...);
-            }, pot);
-
-            nl->forEachNeighbor(id, data, [&pos, &type, &force, &potPair](auto neighborId, const auto &neighborPos, const auto &neighborType,
-                                                                            const auto &neighborForce) {
-                std::apply([&pos, &type, &force, &neighborPos, &neighborType](auto &&... args) {
-                    ((force += args.force(pos, type, neighborPos, neighborType)), ...);
-                }, potPair);
-            });
-        };
-        particles_->forEachParticle(worker, pool_);
-        pool_->waitForTasks();
-    }
 
     static typename Particles::Position noise() {
         typename Particles::Position out;
@@ -116,10 +69,8 @@ private:
     }
 
     std::shared_ptr<Particles> particles_;
+    std::unique_ptr<ForceField> forceField;
     config::PoolPtr<Pool> pool_;
 
-    ExternalPotentials externalPotentials_;
-    PairPotentials pairPotentials_;
-    std::unique_ptr<NeighborList> neighborList_;
 };
 }
