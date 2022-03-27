@@ -13,6 +13,7 @@
 #include <ctiprd/potentials/external.h>
 #include <ctiprd/potentials/interaction.h>
 #include <ctiprd/ParticleTypes.h>
+#include <ctiprd/reactions/basic.h>
 #include <ctiprd/systems/util.h>
 
 namespace ctiprd::systems {

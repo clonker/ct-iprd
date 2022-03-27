@@ -55,7 +55,6 @@ public:
                 h,
                 &pot = externalPotentials_,
                 &potPair = pairPotentials_,
-                nl = neighborList_.get(),
                 &data = *particles_
         ]
                 (auto id, typename Particles::Position &pos, const typename Particles::ParticleType &type,
