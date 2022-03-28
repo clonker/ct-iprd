@@ -16,7 +16,7 @@ namespace ctiprd::reactions {
 template<typename dtype>
 struct ReactionEvent {
     std::size_t id1, id2;
-    std::variant<doi::ReactionE1<dtype>, doi::ReactionE2<dtype>> reaction;
+    std::variant<const doi::ReactionE1<dtype>*, const doi::ReactionE2<dtype>*> reaction;
 };
 
 template<typename System>
@@ -50,7 +50,11 @@ struct UncontrolledApproximation {
                 (
                         ([&events, &pos, &type, &tau, &id](const auto & r) {
                             if(r.shouldPerform(tau, pos, type)) {
-                                events.emplace_back(id, id, &r);
+                                events.push_back(ReactionEvent<dtype>{
+                                    .id1 = id,
+                                    .id2 = id,
+                                    .reaction = &r
+                                });
                             }
                         }(reaction)),
                         ...);
@@ -63,8 +67,10 @@ struct UncontrolledApproximation {
         auto futures = particles->forEachParticle(worker, pool);
         for(auto &future : futures) {
             auto evts = future.get();
-            events.reserve(evts.size());
-            events.insert(end(events), begin(evts), end(evts));
+            for (const auto &x : evts) {
+                events.reserve(events.size() + evts.size());
+                events.insert(end(events), begin(x), end(x));
+            }
         }
     }
 
