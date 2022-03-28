@@ -51,15 +51,15 @@ struct ReactionE2 {
     template<typename State, typename ParticleType>
     [[nodiscard]] bool shouldPerform(dtype tau, const State &state, const ParticleType &t,
                                      const State &state2, const ParticleType &t2) const {
-        if ((t == particleType1 && t2 == particleType2) || (t == particleType2 && t2 == particleType1)) {
+        if ((t == eductType1 && t2 == eductType2) || (t == eductType2 && t2 == eductType1)) {
             return (state - state2).normSquared() < reactionRadius * reactionRadius &&
                    rnd::uniform_real<dtype>() < 1 - std::exp(-rate * tau);
         }
         return false;
     }
 
-    std::size_t particleType1;
-    std::size_t particleType2;
+    std::size_t eductType1;
+    std::size_t eductType2;
     dtype rate;
     dtype reactionRadius;
 };
@@ -96,6 +96,9 @@ template<typename dtype>
 struct Catalysis : public ReactionE2<dtype> {
     using type = tags::catalytic;
     constexpr static std::size_t N_PRODUCTS = 2;
+
+    std::size_t catalyst;
+    std::size_t productType;
 };
 
 }
