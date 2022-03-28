@@ -31,7 +31,6 @@ struct catalytic {};
 
 namespace doi {
 
-namespace detail {
 template<typename dtype>
 struct ReactionE1 {
     constexpr static std::size_t N_EDUCTS = 1;
@@ -64,16 +63,15 @@ struct ReactionE2 {
     dtype rate;
     dtype reactionRadius;
 };
-}
 
 template<typename dtype>
-struct Decay : public detail::ReactionE1<dtype> {
+struct Decay : public ReactionE1<dtype> {
     using type = tags::decay;
     constexpr static std::size_t N_PRODUCTS = 0;
 };
 
 template<typename dtype>
-struct Conversion : public detail::ReactionE1<dtype> {
+struct Conversion : public ReactionE1<dtype> {
     using type = tags::conversion;
     constexpr static std::size_t N_PRODUCTS = 1;
 
@@ -81,7 +79,7 @@ struct Conversion : public detail::ReactionE1<dtype> {
 };
 
 template<typename dtype>
-struct Fission : public detail::ReactionE1<dtype> {
+struct Fission : public ReactionE1<dtype> {
     using type = tags::fission;
     constexpr static std::size_t N_PRODUCTS = 2;
 
@@ -89,13 +87,13 @@ struct Fission : public detail::ReactionE1<dtype> {
 };
 
 template<typename dtype>
-struct Fusion : public detail::ReactionE2<dtype> {
+struct Fusion : public ReactionE2<dtype> {
     using type = tags::fusion;
     constexpr static std::size_t N_PRODUCTS = 1;
 };
 
 template<typename dtype>
-struct Catalysis : public detail::ReactionE2<dtype> {
+struct Catalysis : public ReactionE2<dtype> {
     using type = tags::catalytic;
     constexpr static std::size_t N_PRODUCTS = 2;
 };

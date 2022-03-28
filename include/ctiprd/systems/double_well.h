@@ -52,18 +52,18 @@ struct DoubleWell {
             reactions::doi::Catalysis<T>
     >;
 
-    ReactionsO1 reactionsO1 {
-            {
-                .eductType = particleTypeId<types>("A"),
-                .productType = particleTypeId<types>("B"),
-                .rate = 1.
+    ReactionsO1 reactionsO1 {std::make_tuple(
+            reactions::doi::Conversion<T>{
+                    .eductType = particleTypeId<types>("A"),
+                    .productType = particleTypeId<types>("B"),
+                    .rate = 1.
             },
-            {
-                .eductType = particleTypeId<types>("B"),
-                .productType = particleTypeId<types>("B"),
-                .rate = 1.
+            reactions::doi::Conversion<T>{
+                    .eductType = particleTypeId<types>("B"),
+                    .productType = particleTypeId<types>("A"),
+                    .rate = 1.
             }
-    };
+    )};
     ReactionsO2 reactionsO2 {
             {
                 .rate = 1.,

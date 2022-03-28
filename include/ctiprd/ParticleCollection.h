@@ -118,9 +118,9 @@ public:
         return particleTypes_[ix];
     }
 
-    template<typename F, typename Pool>
-    std::vector<std::future<void>> forEachParticle(F &&op, config::PoolPtr<Pool> pool) {
-        std::vector<std::future<void>> futures;
+    template<typename F, typename Pool, typename R=std::invoke_result_t<std::decay_t<F>, std::size_t, Position&, ParticleType, Force&>>
+    std::vector<std::future<R>> forEachParticle(F &&op, config::PoolPtr<Pool> pool) {
+        std::vector<std::future<R>> futures;
         auto granularity = config::threadGranularity(pool);
         futures.reserve(granularity);
 

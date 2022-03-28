@@ -8,9 +8,16 @@
 
 #include <ctiprd/any.h>
 #include <ctiprd/NeighborList.h>
+#include <variant>
 #include "basic.h"
 
 namespace ctiprd::reactions {
+
+template<typename dtype>
+struct ReactionEvent {
+    std::size_t id1, id2;
+    std::variant<doi::ReactionE1<dtype>, doi::ReactionE2<dtype>> reaction;
+};
 
 template<typename System>
 struct UncontrolledApproximation {
@@ -35,17 +42,30 @@ struct UncontrolledApproximation {
             neighborList_->update(particles, pool);
         }
 
-        auto worker = [&system](auto id, typename Particles::Position &pos, const typename Particles::ParticleType &type,
+        auto worker = [&system, tau](auto id, typename Particles::Position &pos, const typename Particles::ParticleType &type,
                          typename Particles::Force &force) {
-            std::apply([&pos, &type, &force](auto &&... reaction) {
+            std::vector<ReactionEvent<dtype>> events;
+
+            std::apply([&pos, &type, &events, &tau, &id](auto &&... reaction) {
                 (
-                        (force += reaction.force(pos, type)),
+                        ([&events, &pos, &type, &tau, &id](const auto & r) {
+                            if(r.shouldPerform(tau, pos, type)) {
+                                events.emplace_back(id, id, &r);
+                            }
+                        }(reaction)),
                         ...);
             }, system.reactionsO1);
+
+            return events;
         };
 
-        particles->forEachParticle(worker, pool);
-        pool->waitForTasks();
+        std::vector<ReactionEvent<dtype>> events;
+        auto futures = particles->forEachParticle(worker, pool);
+        for(auto &future : futures) {
+            auto evts = future.get();
+            events.reserve(evts.size());
+            events.insert(end(events), begin(evts), end(evts));
+        }
     }
 
     std::unique_ptr<NeighborList> neighborList_;

@@ -18,8 +18,9 @@ PYBIND11_MODULE(dw_mod, m) {
     m.def("simulate", [] () {
         std::size_t nSteps = 1000;
 
+        System system {};
         auto pool = ctiprd::config::make_pool(3);
-        auto integrator = ctiprd::integrator::EulerMaruyama<System>{pool};
+        auto integrator = ctiprd::integrator::EulerMaruyama{system, pool};
         for(int n = 0; n < 10000; ++n) {
             integrator.particles()->addParticle({{0., 0.}}, "A");
         }
