@@ -43,5 +43,32 @@ struct DoubleWell {
     using PairPotentials = std::tuple<
             potentials::pair::HarmonicRepulsion<T, true>
     >;
+
+    using ReactionsO1 = std::tuple<
+            reactions::doi::Conversion<T>,
+            reactions::doi::Conversion<T>
+    >;
+    using ReactionsO2 = std::tuple<
+            reactions::doi::Catalysis<T>
+    >;
+
+    ReactionsO1 reactionsO1 {
+            {
+                .eductType = particleTypeId<types>("A"),
+                .productType = particleTypeId<types>("B"),
+                .rate = 1.
+            },
+            {
+                .eductType = particleTypeId<types>("B"),
+                .productType = particleTypeId<types>("B"),
+                .rate = 1.
+            }
+    };
+    ReactionsO2 reactionsO2 {
+            {
+                .rate = 1.,
+                .eductRadius = .1,
+            },
+    };
 };
 }

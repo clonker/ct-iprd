@@ -87,6 +87,33 @@ public:
         positions_[index].reset();
     }
 
+    template<typename IteratorAdd, typename IteratorRemove>
+    void update(IteratorAdd beginAdd, IteratorAdd endAdd, IteratorRemove beginRemove, IteratorRemove endRemove) {
+        auto itAdd = beginAdd;
+        auto itRemove = beginRemove;
+        while(itAdd != endAdd && itRemove != endRemove) {
+            const auto &[pos, type] = *itAdd;
+            positions_[*itRemove] = pos;
+            particleTypes_[*itRemove] = type;
+            if constexpr(containsForces()) {
+                forces_[*itRemove] = {};
+            }
+            if constexpr(containsVelocities()) {
+                velocities_[*itRemove] = {};
+            }
+            ++itAdd;
+            ++itRemove;
+        }
+        while (itRemove != endRemove) {
+            removeParticle(*itRemove);
+            ++itRemove;
+        }
+        while (itAdd != endAdd) {
+            addParticle(std::get<0>(*itAdd), std::get<1>(*itAdd));
+            ++itAdd;
+        }
+    }
+
     [[nodiscard]] ParticleType typeOf(std::size_t ix) const {
         return particleTypes_[ix];
     }
