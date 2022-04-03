@@ -17,6 +17,10 @@ template<typename dtype>
 struct ReactionEvent {
     std::size_t id1, id2;
     std::variant<const doi::ReactionE1<dtype>*, const doi::ReactionE2<dtype>*> reaction;
+
+    bool conflict(const ReactionEvent &other) const {
+        return id1 == other.id1 || id1 == other.id2 || id2 == other.id1 || id2 == other.id2;
+    }
 };
 
 template<typename System>
