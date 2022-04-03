@@ -6,9 +6,12 @@
  */
 #pragma once
 
+#include <variant>
+#include <execution>
+#include <algorithm>
+
 #include <ctiprd/any.h>
 #include <ctiprd/NeighborList.h>
-#include <variant>
 #include "basic.h"
 
 namespace ctiprd::reactions {
@@ -46,7 +49,7 @@ struct UncontrolledApproximation {
             neighborList_->update(particles, pool);
         }
 
-        auto worker = [&system, tau](auto id, typename Particles::Position &pos, const typename Particles::ParticleType &type,
+        auto worker = [&system, tau, nl=neighborList_.get(), data=particles.get()](auto id, typename Particles::Position &pos, const typename Particles::ParticleType &type,
                          typename Particles::Force &force) {
             std::vector<ReactionEvent<dtype>> events;
 
@@ -64,6 +67,26 @@ struct UncontrolledApproximation {
                         ...);
             }, system.reactionsO1);
 
+            if constexpr(nReactionsO2 > 0) {
+                nl->template forEachNeighbor(id, *data, [&](auto neighborId, const auto &neighborPos,
+                                                           const auto &neighborType,
+                                                           const auto &neighborForce) {
+                    std::apply([&](auto &&... reaction) {
+                        (
+                                ([&](const auto & r) {
+                                    if(r.shouldPerform(tau, pos, type, neighborPos, neighborType)) {
+                                        events.push_back(ReactionEvent<dtype>{
+                                                .id1 = id,
+                                                .id2 = neighborId,
+                                                .reaction = &r
+                                        });
+                                    }
+                                }(reaction)),
+                                ...);
+                    }, system.reactionsO2);
+                });
+            }
+
             return events;
         };
 
@@ -76,6 +99,10 @@ struct UncontrolledApproximation {
                 events.insert(end(events), begin(x), end(x));
             }
         }
+
+        std::sort(std::execution::par_unseq, begin(events), end(events), [](const ReactionEvent<dtype> &a, const ReactionEvent<dtype> &b) {
+            return a.id1 < b.id1; // todo
+        });
     }
 
     std::unique_ptr<NeighborList> neighborList_;
