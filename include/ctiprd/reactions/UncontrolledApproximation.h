@@ -26,7 +26,7 @@ struct ReactionEvent {
     }
 };
 
-template<typename System>
+template<typename System, typename Generator>
 struct UncontrolledApproximation {
     static constexpr std::size_t DIM = System::DIM;
     using dtype = typename System::dtype;
@@ -100,9 +100,7 @@ struct UncontrolledApproximation {
             }
         }
 
-        std::sort(std::execution::par_unseq, begin(events), end(events), [](const ReactionEvent<dtype> &a, const ReactionEvent<dtype> &b) {
-            return a.id1 < b.id1; // todo
-        });
+        std::shuffle(begin(events), end(events), rnd::staticThreadLocalGenerator<Generator>());
     }
 
     std::unique_ptr<NeighborList> neighborList_;

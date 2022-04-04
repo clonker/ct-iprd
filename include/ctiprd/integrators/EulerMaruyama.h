@@ -21,7 +21,7 @@ auto &normalDistribution() {
 }
 
 template<typename System, typename Pool = config::ThreadPool, typename Generator = std::mt19937,
-         typename ForceField = potentials::ForceField<System>, typename Reactions = reactions::UncontrolledApproximation<System>>
+         typename ForceField = potentials::ForceField<System>, typename Reactions = reactions::UncontrolledApproximation<System, Generator>>
 class EulerMaruyama {
 public:
 
