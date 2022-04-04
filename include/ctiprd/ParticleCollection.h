@@ -59,7 +59,7 @@ public:
     }
 
     void setType(size_type index, const ParticleType &type) {
-        type[index] = type;
+        particleTypes_[index] = type;
     }
 
     void setPosition(size_type index, const Position &position) {
@@ -288,6 +288,7 @@ private:
 
 template<typename ParticleCollection>
 struct ParticleCollectionUpdater {
+    using Particles = ParticleCollection;
     using ParticleType = typename ParticleCollection::ParticleType;
     using Position = typename ParticleCollection::Position;
     using Index = typename ParticleCollection::size_type;
@@ -306,17 +307,24 @@ struct ParticleCollectionUpdater {
     }
 
     void remove(const Index &index, ParticleCollection &collection) {
-        if(changed[index].compare_exchange_weak(false, true)) {
+        bool expected {false};
+        if(changed[index].compare_exchange_weak(expected, true)) {
             std::scoped_lock lock(removeMutex);
             collection.removeParticle(index);
         }
     }
 
-    void directUpdate(const Index &index, const ParticleType &type, const Position &position,
+    void directUpdate(const Index &index, const std::optional<ParticleType> &type,
+                      const std::optional<Position> &position,
                       ParticleCollection &collection) {
-        if(changed[index].compare_exchange_weak(false, true)) {
-            collection.setType(index, type);
-            collection.setPosition(index, position);
+        bool expected {false};
+        if(changed[index].compare_exchange_weak(expected, true)) {
+            if(type) {
+                collection.setType(index, *type);
+            }
+            if(position) {
+                collection.setPosition(index, *position);
+            }
         }
     }
 };
