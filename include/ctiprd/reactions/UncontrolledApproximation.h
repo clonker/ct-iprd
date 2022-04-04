@@ -49,9 +49,13 @@ struct UncontrolledApproximation {
             neighborList_->update(particles, pool);
         }
 
-        auto worker = [&system, tau, nl=neighborList_.get(), data=particles.get()](auto id, typename Particles::Position &pos, const typename Particles::ParticleType &type,
-                         typename Particles::Force &force) {
-            std::vector<ReactionEvent<dtype>> events;
+        std::mutex mutex;
+        std::vector<ReactionEvent<dtype>> events;
+        auto worker = [&system, tau, nl=neighborList_.get(), data=particles.get(), &events, &mutex](
+                auto id, typename Particles::Position &pos, const typename Particles::ParticleType &type,
+                typename Particles::Force &force
+        ) {
+            std::vector<ReactionEvent<dtype>> localEvents;
 
             std::apply([&pos, &type, &events, &tau, &id](auto &&... reaction) {
                 (
@@ -87,20 +91,21 @@ struct UncontrolledApproximation {
                 });
             }
 
-            return events;
+            {
+                std::scoped_lock lock {mutex};
+                events.reserve(events.size() + localEvents.size());
+                events.insert(end(events), begin(localEvents), end(localEvents));
+            }
         };
 
-        std::vector<ReactionEvent<dtype>> events;
-        auto futures = particles->forEachParticle(worker, pool);
-        for(auto &future : futures) {
-            auto evts = future.get();
-            for (const auto &x : evts) {
-                events.reserve(events.size() + evts.size());
-                events.insert(end(events), begin(x), end(x));
-            }
-        }
-
+        particles->forEachParticle(worker, pool);
+        pool->waitForTasks();
         std::shuffle(begin(events), end(events), rnd::staticThreadLocalGenerator<Generator>());
+        ParticleCollectionUpdater updater {*particles};
+        for (auto it = begin(events); it != end(events); ++it) {
+
+        }
+        particles->update(begin(updater.toAdd), end(updater.toAdd), begin(updater.toRemove), end(updater.toRemove));
     }
 
     std::unique_ptr<NeighborList> neighborList_;

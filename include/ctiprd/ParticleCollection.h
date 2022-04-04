@@ -54,6 +54,18 @@ public:
         return positions_.size();
     }
 
+    [[nodiscard]] size_type size() const {
+        return positions_.size();
+    }
+
+    void setType(size_type index, const ParticleType &type) {
+        type[index] = type;
+    }
+
+    void setPosition(size_type index, const Position &position) {
+        positions_[index] = position;
+    }
+
     template<typename T>
     void addParticle(const Position &position, T &&type) requires std::convertible_to<T, std::string_view> {
         addParticle(position, systems::particleTypeId<System::types>(type));
@@ -273,4 +285,39 @@ private:
     ContainerType<ParticleType> particleTypes_;
     std::vector<size_type> blanks;
 };
+
+template<typename ParticleCollection>
+struct ParticleCollectionUpdater {
+    using ParticleType = typename ParticleCollection::ParticleType;
+    using Position = typename ParticleCollection::Position;
+    using Index = typename ParticleCollection::size_type;
+
+    explicit ParticleCollectionUpdater(const ParticleCollection &collection) : changed(collection.size()) {}
+    std::vector<std::atomic<bool>> changed;
+    std::deque<std::tuple<Position, ParticleType>> toAdd;
+    std::deque<Index> toRemove;
+
+    std::mutex addMutex, removeMutex;
+
+    void add(const ParticleType &type, const Position &position) {
+        std::scoped_lock lock(addMutex);
+        toAdd.push_back(std::make_tuple(position, type));
+    }
+
+    void remove(const Index &index) {
+        if(changed[index].compare_exchange_weak(false, true)) {
+            std::scoped_lock lock(removeMutex);
+            toRemove.push_back(index);
+        }
+    }
+
+    void directUpdate(const Index &index, const ParticleType &type, const Position &position,
+                      ParticleCollection &collection) {
+        if(changed[index].compare_exchange_weak(false, true)) {
+            collection.setType(index, type);
+            collection.setPosition(index, position);
+        }
+    }
+};
+
 }
