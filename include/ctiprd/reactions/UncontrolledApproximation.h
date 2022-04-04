@@ -7,12 +7,12 @@
 #pragma once
 
 #include <variant>
-#include <execution>
 #include <algorithm>
 
 #include <ctiprd/any.h>
 #include <ctiprd/NeighborList.h>
-#include "basic.h"
+#include <ctiprd/reactions/basic.h>
+#include <ctiprd/ParticleCollection.h>
 
 namespace ctiprd::reactions {
 
@@ -71,7 +71,7 @@ struct ReactionEvent {
     }
 };
 
-template<typename System, typename Generator>
+template<typename System, typename Generator=config::DefaultGenerator>
 struct UncontrolledApproximation {
     static constexpr std::size_t DIM = System::DIM;
     using dtype = typename System::dtype;
@@ -151,6 +151,7 @@ struct UncontrolledApproximation {
             particles->forEachParticle(worker, pool);
         }
         pool->waitForTasks();
+        spdlog::debug("got reactions {}", events.size());
 
         {
             std::shuffle(begin(events), end(events), rnd::staticThreadLocalGenerator<Generator>());

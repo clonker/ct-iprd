@@ -3,6 +3,9 @@
 //
 #pragma once
 
+#include <thread>
+#include <spdlog/spdlog.h>
+
 #include <ctiprd/thread/bsho.h>
 #include <ctiprd/thread/ctpl.h>
 
@@ -11,6 +14,8 @@ namespace ctiprd::config {
 using ThreadPool = bsho::thread_pool;
 template<typename Pool = ThreadPool>
 using PoolPtr = std::shared_ptr<Pool>;
+
+using DefaultGenerator = std::mt19937;
 
 template<typename Pool = ThreadPool>
 static auto make_pool(int n) {

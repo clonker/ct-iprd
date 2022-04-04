@@ -51,7 +51,7 @@ public:
     static constexpr bool containsVelocities() { return flags & particle_collection::useVelocities; }
 
     [[nodiscard]] std::size_t nParticles() const {
-        return positions_.size();
+        return positions_.size() - blanks.size();
     }
 
     [[nodiscard]] size_type size() const {

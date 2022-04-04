@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
 #include <ctiprd/systems/double_well.h>
-#include "ctiprd/ParticleCollection.h"
+#include <ctiprd/ParticleCollection.h>
 
 using System = ctiprd::systems::DoubleWell<float>;
 
