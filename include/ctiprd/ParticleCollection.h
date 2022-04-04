@@ -293,6 +293,7 @@ struct ParticleCollectionUpdater {
     using Index = typename ParticleCollection::size_type;
 
     explicit ParticleCollectionUpdater(const ParticleCollection &collection) : changed(collection.size()) {}
+
     std::vector<std::atomic<bool>> changed;
     std::deque<std::tuple<Position, ParticleType>> toAdd;
     std::deque<Index> toRemove;
@@ -304,10 +305,10 @@ struct ParticleCollectionUpdater {
         toAdd.push_back(std::make_tuple(position, type));
     }
 
-    void remove(const Index &index) {
+    void remove(const Index &index, ParticleCollection &collection) {
         if(changed[index].compare_exchange_weak(false, true)) {
             std::scoped_lock lock(removeMutex);
-            toRemove.push_back(index);
+            collection.removeParticle(index);
         }
     }
 

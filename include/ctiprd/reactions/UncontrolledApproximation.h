@@ -16,14 +16,10 @@
 
 namespace ctiprd::reactions {
 
-template<typename dtype>
+template<typename dtype, typename Updater>
 struct ReactionEvent {
     std::size_t id1, id2;
-    std::variant<const doi::ReactionE1<dtype>*, const doi::ReactionE2<dtype>*> reaction;
-
-    bool conflict(const ReactionEvent &other) const {
-        return id1 == other.id1 || id1 == other.id2 || id2 == other.id1 || id2 == other.id2;
-    }
+    std::function<void(Updater &, std::size_t id1, std::size_t id2)> perform;
 };
 
 template<typename System, typename Generator>
@@ -51,61 +47,74 @@ struct UncontrolledApproximation {
 
         std::mutex mutex;
         std::vector<ReactionEvent<dtype>> events;
-        auto worker = [&system, tau, nl=neighborList_.get(), data=particles.get(), &events, &mutex](
-                auto id, typename Particles::Position &pos, const typename Particles::ParticleType &type,
-                typename Particles::Force &force
-        ) {
-            std::vector<ReactionEvent<dtype>> localEvents;
+        {
+            auto worker = [&system, tau, nl = neighborList_.get(), data = particles.get(), &events, &mutex](
+                    auto id, typename Particles::Position &pos, const typename Particles::ParticleType &type,
+                    typename Particles::Force &force
+            ) {
+                std::vector<ReactionEvent<dtype>> localEvents;
 
-            std::apply([&pos, &type, &events, &tau, &id](auto &&... reaction) {
-                (
-                        ([&events, &pos, &type, &tau, &id](const auto & r) {
-                            if(r.shouldPerform(tau, pos, type)) {
-                                events.push_back(ReactionEvent<dtype>{
-                                    .id1 = id,
-                                    .id2 = id,
-                                    .reaction = &r
-                                });
-                            }
-                        }(reaction)),
-                        ...);
-            }, system.reactionsO1);
+                std::apply([&pos, &type, &events, &tau, &id](auto &&... reaction) {
+                    (
+                            ([&events, &pos, &type, &tau, &id](const auto &r) {
+                                if (r.shouldPerform(tau, pos, type)) {
+                                    events.push_back(ReactionEvent<dtype>{
+                                            .id1 = id,
+                                            .id2 = id,
+                                            .reaction = &r
+                                    });
+                                }
+                            }(reaction)),
+                            ...);
+                }, system.reactionsO1);
 
-            if constexpr(nReactionsO2 > 0) {
-                nl->template forEachNeighbor(id, *data, [&](auto neighborId, const auto &neighborPos,
-                                                           const auto &neighborType,
-                                                           const auto &neighborForce) {
-                    std::apply([&](auto &&... reaction) {
-                        (
-                                ([&](const auto & r) {
-                                    if(r.shouldPerform(tau, pos, type, neighborPos, neighborType)) {
-                                        events.push_back(ReactionEvent<dtype>{
-                                                .id1 = id,
-                                                .id2 = neighborId,
-                                                .reaction = &r
-                                        });
-                                    }
-                                }(reaction)),
-                                ...);
-                    }, system.reactionsO2);
-                });
-            }
+                if constexpr(nReactionsO2 > 0) {
+                    nl->template forEachNeighbor(id, *data, [&](auto neighborId, const auto &neighborPos,
+                                                                const auto &neighborType,
+                                                                const auto &neighborForce) {
+                        std::apply([&](auto &&... reaction) {
+                            (
+                                    ([&](const auto &r) {
+                                        if (r.shouldPerform(tau, pos, type, neighborPos, neighborType)) {
+                                            events.push_back(ReactionEvent<dtype>{
+                                                    .id1 = id,
+                                                    .id2 = neighborId,
+                                                    .reaction = &r
+                                            });
+                                        }
+                                    }(reaction)),
+                                    ...);
+                        }, system.reactionsO2);
+                    });
+                }
 
-            {
-                std::scoped_lock lock {mutex};
-                events.reserve(events.size() + localEvents.size());
-                events.insert(end(events), begin(localEvents), end(localEvents));
-            }
-        };
+                {
+                    std::scoped_lock lock{mutex};
+                    events.reserve(events.size() + localEvents.size());
+                    events.insert(end(events), begin(localEvents), end(localEvents));
+                }
+            };
 
-        particles->forEachParticle(worker, pool);
-        pool->waitForTasks();
-        std::shuffle(begin(events), end(events), rnd::staticThreadLocalGenerator<Generator>());
-        ParticleCollectionUpdater updater {*particles};
-        for (auto it = begin(events); it != end(events); ++it) {
-
+            particles->forEachParticle(worker, pool);
         }
-        particles->update(begin(updater.toAdd), end(updater.toAdd), begin(updater.toRemove), end(updater.toRemove));
+        pool->waitForTasks();
+
+        {
+            std::shuffle(begin(events), end(events), rnd::staticThreadLocalGenerator<Generator>());
+            ParticleCollectionUpdater updater {*particles};
+
+            auto granularity = config::threadGranularity(pool);
+            auto worker = [&updater](auto begin, auto end) {
+                for(auto it = begin; it != end; ++it) {
+
+                }
+            };
+
+
+
+            pool->waitForTasks();
+            particles->update(begin(updater.toAdd), end(updater.toAdd), begin(updater.toRemove), end(updater.toRemove));
+        }
     }
 
     std::unique_ptr<NeighborList> neighborList_;
