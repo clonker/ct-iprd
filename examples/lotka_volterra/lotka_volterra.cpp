@@ -36,35 +36,40 @@ PYBIND11_MODULE(lv_mod, m) {
 
         std::vector<std::tuple<np_array<float>, np_array<std::size_t>>> trajectory;
 
-        for(std::size_t t = 0; t < nSteps; ++t) {
-            integrator.step(1e-2);
+        {
+            py::gil_scoped_release release;
+            for (std::size_t t = 0; t < nSteps; ++t) {
+                integrator.step(1e-2);
 
-            if(t % 200 == 0) {
-                trajectory.emplace_back(
-                        np_array<float>{std::vector<std::size_t>{integrator.particles()->nParticles(), 2}},
-                        np_array<std::size_t>{std::vector<std::size_t>(1, integrator.particles()->nParticles())});
-                std::size_t nPredator {}, nPrey {};
-                std::size_t ix = 0;
-                for (std::size_t i = 0; i < integrator.particles()->size(); ++i) {
-                    if (integrator.particles()->exists(i)) {
-                        std::get<0>(trajectory.back()).mutable_at(ix, 0) = integrator.particles()->positionOf(i)[0];
-                        std::get<0>(trajectory.back()).mutable_at(ix, 1) = integrator.particles()->positionOf(i)[1];
-                        std::get<1>(trajectory.back()).mutable_at(ix) = integrator.particles()->typeOf(i);
-                        if (integrator.particles()->typeOf(i) == System::preyId) {
-                            ++nPrey;
-                        } else {
-                            ++nPredator;
+                if (t % 200 == 0) {
+                    py::gil_scoped_acquire acquire;
+                    trajectory.emplace_back(
+                            np_array<float>{std::vector<std::size_t>{integrator.particles()->nParticles(), 2}},
+                            np_array<std::size_t>{std::vector<std::size_t>(1, integrator.particles()->nParticles())});
+                    std::size_t nPredator{}, nPrey{};
+                    std::size_t ix = 0;
+                    for (std::size_t i = 0; i < integrator.particles()->size(); ++i) {
+                        if (integrator.particles()->exists(i)) {
+                            std::get<0>(trajectory.back()).mutable_at(ix, 0) = integrator.particles()->positionOf(i)[0];
+                            std::get<0>(trajectory.back()).mutable_at(ix, 1) = integrator.particles()->positionOf(i)[1];
+                            std::get<1>(trajectory.back()).mutable_at(ix) = integrator.particles()->typeOf(i);
+                            if (integrator.particles()->typeOf(i) == System::preyId) {
+                                ++nPrey;
+                            } else {
+                                ++nPredator;
+                            }
+                            ++ix;
                         }
-                        ++ix;
+                    }
+                    progressCallback(t);
+                }
+
+                if(t % 50 == 0) {
+                    py::gil_scoped_acquire acquire;
+                    if (PyErr_CheckSignals() != 0) {
+                        throw py::error_already_set();
                     }
                 }
-                progressCallback(t);
-                // spdlog::critical("nPrey = {}, nPredator = {}", nPrey, nPredator);
-            }
-            // bar.update();
-
-            if (PyErr_CheckSignals() != 0){
-                throw py::error_already_set();
             }
         }
 
