@@ -90,5 +90,8 @@ struct DoubleWell {
 
     ReactionsO1 reactionsO1 {};
     ReactionsO2 reactionsO2 {};
+
+    ExternalPotentials externalPotentials {};
+    PairPotentials pairPotentials {};
 };
 }

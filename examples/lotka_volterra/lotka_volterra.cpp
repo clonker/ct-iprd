@@ -15,11 +15,11 @@ template<typename dtype>
 using np_array = py::array_t<dtype, py::array::c_style | py::array::forcecast>;
 
 PYBIND11_MODULE(lv_mod, m) {
-    m.def("simulate", [] () {
+    m.def("simulate", [] (int njobs) {
         std::size_t nSteps = 100000;
 
         System system {};
-        auto pool = ctiprd::config::make_pool(3);
+        auto pool = ctiprd::config::make_pool(njobs);
         auto integrator = ctiprd::integrator::EulerMaruyama{system, pool};
 
         {
