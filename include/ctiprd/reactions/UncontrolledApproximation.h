@@ -77,6 +77,43 @@ struct ReactionImpl<doi::Conversion<dtype>> {
 };
 
 template<typename dtype>
+struct ReactionImpl<doi::Fission<dtype>> {
+    explicit ReactionImpl(const doi::Fission<dtype> *reaction) : reaction(reaction) {}
+
+    template<typename State, typename ParticleType>
+    [[nodiscard]] bool shouldPerform(dtype tau, const State &state, const ParticleType &t) const {
+        return detail::shouldPerformO1(tau, state, t, reaction);
+    }
+
+    template<typename Updater, typename Particles = typename Updater::Particles>
+    void operator()(auto id1, auto /*ignore*/, Particles &collection, Updater &updater) {
+        const auto &c = collection.positionOf(id1);
+        typename Particles::Position n {};
+        std::transform(begin(n.data), end(n.data), begin(n.data), [](const auto &) {
+            return normal(rnd::staticThreadLocalGenerator());
+        });
+        n /= n.norm();
+
+        const auto distance = reaction->productDistance * std::pow(uniform(rnd::staticThreadLocalGenerator()), 1/Particles::DIM);
+        updater.add(reaction->productType2, c - 0.5 * distance * n);
+        updater.directUpdate(id1, reaction->productType1, c + 0.5 * distance * n, collection);
+    }
+
+    const doi::Fission<dtype> *reaction;
+
+    template<typename Generator>
+    static auto normal(Generator &generator) {
+        static std::normal_distribution<dtype> dist{0, 1};
+        return dist(generator);
+    }
+    template<typename Generator>
+    static auto uniform(Generator &generator) {
+        static std::uniform_real_distribution<dtype> dist{0, 1};
+        return dist(generator);
+    }
+};
+
+template<typename dtype>
 struct ReactionImpl<doi::Catalysis<dtype>> {
     explicit ReactionImpl(const doi::Catalysis<dtype> *reaction) : reaction(reaction) {}
 

@@ -35,6 +35,8 @@ public:
             particles_(std::make_shared<Particles>()), pool_(pool), system(system),
             forceField(std::make_unique<ForceField>()),
             reactions(std::make_unique<Reactions>()) {
+        forceField->setExternalPotentials(system.externalPotentials);
+        forceField->setPairPotentials(system.pairPotentials);
     }
 
     std::shared_ptr<Particles> particles() const {

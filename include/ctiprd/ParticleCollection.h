@@ -171,7 +171,7 @@ public:
 
         };
 
-        auto n = nParticles();
+        auto n = size();
         auto grainSize = n / granularity;
         auto itPos = positions_.begin();
         auto itTypes = particleTypes_.begin();
@@ -238,7 +238,7 @@ public:
             return result;
         };
 
-        auto n = nParticles();
+        auto n = size();
         auto grainSize = n / granularity;
         auto itPos = positions_.begin();
         auto itTypes = particleTypes_.begin();

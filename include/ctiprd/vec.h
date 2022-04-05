@@ -38,6 +38,10 @@ struct Vec {
         return std::inner_product(begin(data), end(data), begin(data), static_cast<value_type>(0));
     }
 
+    value_type norm() const {
+        return std::sqrt(normSquared());
+    }
+
     Vec& operator+=(const Vec &other) {
         for(size_type i = 0; i < DIM; ++i) data[i] += other[i];
         return *this;

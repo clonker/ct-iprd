@@ -1,1 +1,2 @@
 add_subdirectory(2d_double_well)
+add_subdirectory(lotka_volterra)

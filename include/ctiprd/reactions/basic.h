@@ -72,11 +72,11 @@ struct Fusion {
 
     std::size_t eductType1;
     std::size_t eductType2;
-    dtype rate;
+    std::size_t productType;
     dtype reactionRadius;
+    dtype rate;
     dtype w1 {.5};
     dtype w2 {.5};
-    std::size_t productType;
 };
 
 template<typename dtype>
@@ -85,11 +85,11 @@ struct Catalysis {
     constexpr static std::size_t N_EDUCTS = 2;
     constexpr static std::size_t N_PRODUCTS = 2;
 
-    dtype rate;
-    dtype reactionRadius;
     std::size_t catalyst;
     std::size_t eductType;
     std::size_t productType;
+    dtype reactionRadius;
+    dtype rate;
 };
 
 }
