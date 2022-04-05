@@ -38,11 +38,9 @@ PYBIND11_MODULE(lv_mod, m) {
 
         // progressbar bar(static_cast<int>(nSteps));
         for(std::size_t t = 0; t < nSteps; ++t) {
-            py::gil_scoped_release gilScopedRelease;
             integrator.step(1e-2);
 
             if(t % 200 == 0) {
-                py::gil_scoped_acquire gil;
                 trajectory.emplace_back(
                         np_array<float>{std::vector<std::size_t>{integrator.particles()->nParticles(), 2}},
                         np_array<std::size_t>{std::vector<std::size_t>(1, integrator.particles()->nParticles())});
