@@ -8,7 +8,8 @@ using System = ctiprd::systems::DoubleWell<float>;
 
 int main() {
     auto pool = ctiprd::config::make_pool(5);
-    auto integrator = ctiprd::integrator::EulerMaruyama<System>{pool};
+    System system {};
+    auto integrator = ctiprd::integrator::EulerMaruyama<System>{system, pool};
     integrator.particles()->addParticle({{0., 0.}}, "A");
     integrator.step(1e-3);
     return 0;
