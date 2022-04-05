@@ -40,13 +40,22 @@ PYBIND11_MODULE(lv_mod, m) {
         for(std::size_t t = 0; t < nSteps; ++t) {
             integrator.step(1e-2);
 
-            /*const auto &positions = integrator.particles()->positions();
-            auto i = 0;
-            for (const auto &pos: positions) {
-                out.mutable_at(t, i, 0) = (*pos)[0];
-                out.mutable_at(t, i, 1) = (*pos)[1];
-                ++i;
-            }*/
+            if(t % 50 == 0) {
+                std::size_t nPredator, nPrey;
+                for (std::size_t i = 0; i < integrator.particles()->size(); ++i) {
+                    if (integrator.particles()->exists(i)) {
+                        if (integrator.particles()->typeOf(i) == System::preyId) {
+                            ++nPrey;
+                        } else {
+                            ++nPredator;
+                        }
+                    }
+                }
+
+                spdlog::critical("nPrey = {}, nPredator = {}", nPrey, nPredator);
+            }
+
+
 
             bar.update();
         }

@@ -135,6 +135,10 @@ public:
         return particleTypes_[ix];
     }
 
+    [[nodiscard]] bool exists(std::size_t ix) const {
+        return positions_[ix];
+    }
+
     template<typename F, typename Pool,
             typename R=std::invoke_result_t<std::decay_t<F>, std::size_t, Position&, ParticleType, Force&>,
             typename = std::enable_if_t<std::is_void_v<R>>>

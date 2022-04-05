@@ -91,6 +91,9 @@ struct LotkaVolterra {
             reactions::doi::Catalysis<T> // predator eats prey
     >;
 
+    static constexpr std::size_t preyId = particleTypeId<types>("prey");
+    static constexpr std::size_t predatorId = particleTypeId<types>("predator");
+
     ReactionsO1 reactionsO1{};
     ReactionsO2 reactionsO2{};
 
