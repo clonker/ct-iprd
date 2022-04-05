@@ -41,7 +41,7 @@ PYBIND11_MODULE(lv_mod, m) {
             integrator.step(1e-2);
 
             if(t % 50 == 0) {
-                std::size_t nPredator, nPrey;
+                std::size_t nPredator {}, nPrey {};
                 for (std::size_t i = 0; i < integrator.particles()->size(); ++i) {
                     if (integrator.particles()->exists(i)) {
                         if (integrator.particles()->typeOf(i) == System::preyId) {
