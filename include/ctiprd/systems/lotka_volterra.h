@@ -24,38 +24,50 @@ struct LotkaVolterra {
     static constexpr std::size_t DIM = 2;
     static constexpr std::array<T, DIM> boxSize{10., 50.};
     static constexpr bool periodic = false;
-
+    static constexpr ParticleTypes<dtype, 2> types{{
+              {
+                      .name = "predator",
+                      .diffusionConstant = 1.
+              },
+              {
+                      .name = "prey",
+                      .diffusionConstant = 1.
+              },
+    }};
+    static constexpr std::size_t preyId = particleTypeId<types>("prey");
+    static constexpr std::size_t predatorId = particleTypeId<types>("predator");
+    
     LotkaVolterra() {
         {
             std::get<0>(reactionsO1) = reactions::doi::Fission<T>{
-                    .eductType = particleTypeId<types>("prey"),
-                    .productType1 = particleTypeId<types>("prey"),
-                    .productType2 = particleTypeId<types>("prey"),
+                    .eductType = preyId,
+                    .productType1 = preyId,
+                    .productType2 = preyId,
                     .productDistance = .1,
                     .rate = 0.004
             };
             std::get<1>(reactionsO1) = reactions::doi::Decay<T>{
-                    .eductType = particleTypeId<types>("predator"),
+                    .eductType = predatorId,
                     .rate = 0.003
             };
         }
         {
             std::get<0>(reactionsO2) = reactions::doi::Fusion<T>{
-                    .eductType1 = particleTypeId<types>("prey"),
-                    .eductType2 = particleTypeId<types>("prey"),
-                    .productType = particleTypeId<types>("prey"),
+                    .eductType1 = preyId,
+                    .eductType2 = preyId,
+                    .productType = preyId,
                     .rate = 1e-5
             };
             std::get<1>(reactionsO2) = reactions::doi::Fusion<T>{
-                    .eductType1 = particleTypeId<types>("predator"),
-                    .eductType2 = particleTypeId<types>("predator"),
-                    .productType = particleTypeId<types>("predator"),
+                    .eductType1 = predatorId,
+                    .eductType2 = predatorId,
+                    .productType = predatorId,
                     .rate = 1e-5
             };
             std::get<2>(reactionsO2) = reactions::doi::Catalysis<T>{
-                    .catalyst = particleTypeId<types>("predator"),
-                    .eductType = particleTypeId<types>("prey"),
-                    .productType = particleTypeId<types>("predator"),
+                    .catalyst = predatorId,
+                    .eductType = preyId,
+                    .productType = predatorId,
                     .reactionRadius = 0.1,
                     .rate = 0.000477
             };
@@ -68,16 +80,7 @@ struct LotkaVolterra {
         }
     }
 
-    static constexpr ParticleTypes<dtype, 2> types{{
-                                                           {
-                                                                   .name = "predator",
-                                                                   .diffusionConstant = 1.
-                                                           },
-                                                           {
-                                                                   .name = "prey",
-                                                                   .diffusionConstant = 1.
-                                                           },
-                                                   }};
+
     using ExternalPotentials = std::tuple<potentials::external::BoxInclusion<dtype, DIM, true>>;
     using PairPotentials = std::tuple<>;
 
@@ -90,9 +93,6 @@ struct LotkaVolterra {
             reactions::doi::Fusion<T>, // predator social friction
             reactions::doi::Catalysis<T> // predator eats prey
     >;
-
-    static constexpr std::size_t preyId = particleTypeId<types>("prey");
-    static constexpr std::size_t predatorId = particleTypeId<types>("predator");
 
     ReactionsO1 reactionsO1{};
     ReactionsO2 reactionsO2{};
