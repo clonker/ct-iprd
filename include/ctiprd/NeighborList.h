@@ -38,7 +38,7 @@ public:
 
     template<typename ParticleCollection, typename Pool>
     void update(std::shared_ptr<ParticleCollection> collection, std::shared_ptr<Pool> pool) {
-        list.resize(collection->nParticles() + 1);
+        list.resize(collection->size() + 1);
         std::fill(std::begin(list), std::end(list), 0);
         std::fill(std::begin(head), std::end(head), thread::copyable_atomic<std::size_t>());
         auto updateOp = [this](std::size_t particleId, const auto &pos, const auto &/*ignore*/, const auto&/*noe*/) {

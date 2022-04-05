@@ -32,72 +32,63 @@ struct catalytic {};
 namespace doi {
 
 template<typename dtype>
-struct ReactionE1 {
+struct Decay {
+    using type = tags::decay;
     constexpr static std::size_t N_EDUCTS = 1;
-
-    template<typename State, typename ParticleType>
-    [[nodiscard]] bool shouldPerform(dtype tau, const State &state, const ParticleType &t) const {
-        return t == eductType && rnd::uniform_real<dtype>() < 1 - std::exp(-rate * tau);
-    }
+    constexpr static std::size_t N_PRODUCTS = 0;
 
     std::size_t eductType;
     dtype rate;
 };
 
 template<typename dtype>
-struct ReactionE2 {
-    constexpr static std::size_t N_EDUCTS = 2;
+struct Conversion{
+    using type = tags::conversion;
+    constexpr static std::size_t N_EDUCTS = 1;
+    constexpr static std::size_t N_PRODUCTS = 1;
 
-    template<typename State, typename ParticleType>
-    [[nodiscard]] bool shouldPerform(dtype tau, const State &state, const ParticleType &t,
-                                     const State &state2, const ParticleType &t2) const {
-        if ((t == eductType1 && t2 == eductType2) || (t == eductType2 && t2 == eductType1)) {
-            return (state - state2).normSquared() < reactionRadius * reactionRadius &&
-                   rnd::uniform_real<dtype>() < 1 - std::exp(-rate * tau);
-        }
-        return false;
-    }
+    std::size_t eductType;
+    std::size_t productType;
+    dtype rate;
+};
+
+template<typename dtype>
+struct Fission {
+    using type = tags::fission;
+    constexpr static std::size_t N_EDUCTS = 1;
+    constexpr static std::size_t N_PRODUCTS = 2;
+
+    std::size_t eductType;
+    std::size_t productType1, productType2;
+    dtype productDistance;
+    dtype rate;
+};
+
+template<typename dtype>
+struct Fusion {
+    using type = tags::fusion;
+    constexpr static std::size_t N_EDUCTS = 2;
+    constexpr static std::size_t N_PRODUCTS = 1;
 
     std::size_t eductType1;
     std::size_t eductType2;
     dtype rate;
     dtype reactionRadius;
-};
-
-template<typename dtype>
-struct Decay : public ReactionE1<dtype> {
-    using type = tags::decay;
-    constexpr static std::size_t N_PRODUCTS = 0;
-};
-
-template<typename dtype>
-struct Conversion : public ReactionE1<dtype> {
-    using type = tags::conversion;
-    constexpr static std::size_t N_PRODUCTS = 1;
-
+    dtype w1 {.5};
+    dtype w2 {.5};
     std::size_t productType;
 };
 
 template<typename dtype>
-struct Fission : public ReactionE1<dtype> {
-    using type = tags::fission;
-    constexpr static std::size_t N_PRODUCTS = 2;
-
-    dtype productDistance;
-};
-
-template<typename dtype>
-struct Fusion : public ReactionE2<dtype> {
-    using type = tags::fusion;
-    constexpr static std::size_t N_PRODUCTS = 1;
-};
-
-template<typename dtype>
-struct Catalysis : public ReactionE2<dtype> {
+struct Catalysis {
     using type = tags::catalytic;
+    constexpr static std::size_t N_EDUCTS = 2;
     constexpr static std::size_t N_PRODUCTS = 2;
 
+    dtype rate;
+    dtype reactionRadius;
     std::size_t catalyst;
+    std::size_t eductType;
     std::size_t productType;
 };
 

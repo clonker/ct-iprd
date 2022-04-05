@@ -12,8 +12,11 @@ TEST_CASE("Test Integration", "[integration]") {
     System system {};
     auto pool = ctiprd::config::make_pool(3);
     auto integrator = ctiprd::integrator::EulerMaruyama{system, pool};
-    for(int n = 0; n < 1000; ++n) {
+    for(int n = 0; n < 500; ++n) {
         integrator.particles()->addParticle({{0., 0.}}, "A");
+    }
+    for(int n = 0; n < 500; ++n) {
+        integrator.particles()->addParticle({{.1, .1}}, "B");
     }
 
 

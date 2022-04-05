@@ -27,23 +27,31 @@ struct DoubleWell {
 
     DoubleWell() {
         {
-            auto &[conv1, conv2] = reactionsO1;
+            auto &[conv1, conv2, decay] = reactionsO1;
             conv1.eductType = particleTypeId<types>("A");
             conv1.productType = particleTypeId<types>("B");
-            conv1.rate = 1.;
+            conv1.rate = .0;
 
             conv2.eductType = particleTypeId<types>("B");
             conv2.productType = particleTypeId<types>("A");
-            conv2.rate = 1.;
+            conv2.rate = 0;
+
+            decay.eductType = particleTypeId<types>("A");
+            decay.rate = 0;
         }
         {
-            auto &[cata] = reactionsO2;
-            cata.eductType1 = particleTypeId<types>("A");
-            cata.eductType2 = particleTypeId<types>("B");
+            auto &[cata, fusion] = reactionsO2;
+            cata.eductType = particleTypeId<types>("A");
             cata.catalyst = particleTypeId<types>("A");
-            cata.productType = particleTypeId<types>("A");
-            cata.rate = .1;
+            cata.productType = particleTypeId<types>("B");
+            cata.rate = 0;
             cata.reactionRadius = .1;
+
+            fusion.eductType1 = particleTypeId<types>("A");
+            fusion.eductType2 = particleTypeId<types>("A");
+            fusion.productType = particleTypeId<types>("B");
+            fusion.rate = .1;
+            fusion.reactionRadius = .1;
         }
     }
 
@@ -66,12 +74,18 @@ struct DoubleWell {
             potentials::pair::HarmonicRepulsion<T, true>
     >;
 
-    using ReactionsO1 = std::tuple<
+    /*using ReactionsO1 = std::tuple<
             reactions::doi::Conversion<T>,
             reactions::doi::Conversion<T>
+    >;*/
+    using ReactionsO1 = std::tuple<
+            reactions::doi::Conversion<T>,
+            reactions::doi::Conversion<T>,
+            reactions::doi::Decay<T>
     >;
     using ReactionsO2 = std::tuple<
-            reactions::doi::Catalysis<T>
+            reactions::doi::Catalysis<T>,
+            reactions::doi::Fusion<T>
     >;
 
     ReactionsO1 reactionsO1 {};

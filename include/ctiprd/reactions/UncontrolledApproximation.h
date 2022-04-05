@@ -18,22 +18,55 @@ namespace ctiprd::reactions {
 
 namespace impl {
 
+namespace detail {
+
+template<typename dtype, typename State, typename ParticleType, typename Reaction>
+[[nodiscard]] bool shouldPerformO1(dtype tau, const State &state, const ParticleType &t, const Reaction* reaction) {
+    return t == reaction->eductType && rnd::uniform_real<dtype>() < 1 - std::exp(-reaction->rate * tau);
+}
+
+template<typename dtype, typename State, typename ParticleType>
+[[nodiscard]] bool shouldPerformO2(dtype tau, const State &state, const ParticleType &t,
+                                 const State &state2, const ParticleType &t2,
+                                 const ParticleType &eductType1, const ParticleType &eductType2,
+                                 dtype rate, dtype radius) {
+    if ((t == eductType1 && t2 == eductType2) || (t == eductType2 && t2 == eductType1)) {
+        return (state - state2).normSquared() < radius * radius &&
+               rnd::uniform_real<dtype>() < 1 - std::exp(-rate * tau);
+    }
+    return false;
+}
+
+}
+
 template<typename Reaction>
 struct ReactionImpl;
 
 template<typename dtype>
 struct ReactionImpl<doi::Decay<dtype>> {
-    explicit ReactionImpl(const doi::Decay<dtype> *reaction) {}
+    explicit ReactionImpl(const doi::Decay<dtype> *reaction) : reaction(reaction) {}
+
+    template<typename State, typename ParticleType>
+    [[nodiscard]] bool shouldPerform(dtype tau, const State &state, const ParticleType &t) const {
+        return detail::shouldPerformO1(tau, state, t, reaction);
+    }
 
     template<typename Updater>
     void operator()(auto id1, auto /*ignore*/, typename Updater::Particles &collection, Updater &updater) {
         updater.remove(id1, collection);
     }
+
+    const doi::Decay<dtype> *reaction;
 };
 
 template<typename dtype>
 struct ReactionImpl<doi::Conversion<dtype>> {
     explicit ReactionImpl(const doi::Conversion<dtype> *reaction) : reaction(reaction) {}
+
+    template<typename State, typename ParticleType>
+    [[nodiscard]] bool shouldPerform(dtype tau, const State &state, const ParticleType &t) const {
+        return detail::shouldPerformO1(tau, state, t, reaction);
+    }
 
     template<typename Updater>
     void operator()(auto id1, auto /*ignore*/, typename Updater::Particles &collection, Updater &updater) {
@@ -47,6 +80,14 @@ template<typename dtype>
 struct ReactionImpl<doi::Catalysis<dtype>> {
     explicit ReactionImpl(const doi::Catalysis<dtype> *reaction) : reaction(reaction) {}
 
+    template<typename State, typename ParticleType>
+    [[nodiscard]] bool shouldPerform(dtype tau, const State &state, const ParticleType &t,
+                                     const State &state2, const ParticleType &t2) const {
+        return detail::shouldPerformO2(tau, state, t, state2, t2,
+                                       reaction->catalyst, reaction->eductType, reaction->rate,
+                                       reaction->reactionRadius);
+    }
+
     template<typename Updater>
     void operator()(auto id1, auto id2, typename Updater::Particles &collection, Updater &updater) {
         if(collection.typeOf(id1) == reaction->catalyst) {
@@ -57,6 +98,36 @@ struct ReactionImpl<doi::Catalysis<dtype>> {
     }
 
     const doi::Catalysis<dtype> *reaction;
+};
+
+template<typename dtype>
+struct ReactionImpl<doi::Fusion<dtype>> {
+    explicit ReactionImpl(const doi::Fusion<dtype> *reaction) : reaction(reaction) {}
+
+    template<typename State, typename ParticleType>
+    [[nodiscard]] bool shouldPerform(dtype tau, const State &state, const ParticleType &t,
+                                     const State &state2, const ParticleType &t2) const {
+        return detail::shouldPerformO2(tau, state, t, state2, t2, reaction->eductType1, reaction->eductType2,
+                                       reaction->rate, reaction->reactionRadius);
+    }
+
+    template<typename Updater>
+    void operator()(auto id1, auto id2, typename Updater::Particles &collection, Updater &updater) {
+        if (updater.claim(id1)) {
+            if (updater.claim(id2)) {
+                auto w1 = collection.typeOf(id1) == reaction->eductType1 ? reaction->w1 : reaction->w2;
+                updater.template directUpdate<false>(
+                        id1, reaction->productType,
+                        collection.positionOf(id1) + w1 * (collection.positionOf(id2) - collection.positionOf(id1)),
+                        collection
+                );
+                updater.template remove<false>(id2, collection);
+            } else {
+                updater.release(id1);
+            }
+        }
+    }
+    const doi::Fusion<dtype> *reaction;
 };
 
 }
@@ -107,14 +178,15 @@ struct UncontrolledApproximation {
             ) {
                 std::vector<ReactionEvent<dtype, Updater>> localEvents;
 
-                std::apply([&pos, &type, &events, &tau, &id](auto &&... reaction) {
+                std::apply([&pos, &type, &localEvents, &tau, &id](auto &&... reaction) {
                     (
-                            ([&events, &pos, &type, &tau, &id](const auto &r) {
-                                if (r.shouldPerform(tau, pos, type)) {
-                                    events.push_back(ReactionEvent<dtype, Updater>{
+                            ([&localEvents, &pos, &type, &tau, &id](const auto &r) {
+                                impl::ReactionImpl<std::decay_t<decltype(r)>> impl {&r};
+                                if (impl.shouldPerform(tau, pos, type)) {
+                                    localEvents.push_back(ReactionEvent<dtype, Updater>{
                                             .id1 = id,
                                             .id2 = id,
-                                            .perform = impl::ReactionImpl<std::decay_t<decltype(r)>>{&r}
+                                            .perform = impl
                                     });
                                 }
                             }(reaction)),
@@ -128,11 +200,12 @@ struct UncontrolledApproximation {
                         std::apply([&](auto &&... reaction) {
                             (
                                     ([&](const auto &r) {
-                                        if (r.shouldPerform(tau, pos, type, neighborPos, neighborType)) {
-                                            events.push_back(ReactionEvent<dtype, Updater>{
+                                        impl::ReactionImpl<std::decay_t<decltype(r)>> impl {&r};
+                                        if (impl.shouldPerform(tau, pos, type, neighborPos, neighborType)) {
+                                            localEvents.push_back(ReactionEvent<dtype, Updater>{
                                                     .id1 = id,
                                                     .id2 = neighborId,
-                                                    .perform = impl::ReactionImpl<std::decay_t<decltype(r)>>{&r}
+                                                    .perform = impl
                                             });
                                         }
                                     }(reaction)),

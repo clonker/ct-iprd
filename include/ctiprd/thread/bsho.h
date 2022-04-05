@@ -24,6 +24,7 @@
 #include <thread>      // std::this_thread, std::thread
 #include <type_traits> // std::common_type_t, std::decay_t, std::enable_if_t, std::is_void_v, std::invoke_result_t
 #include <utility>     // std::move
+#include <spdlog/spdlog.h>
 
 namespace bsho {
 // ============================================================================================= //
@@ -48,7 +49,7 @@ public:
      */
     thread_pool(const ui32 &_thread_count = std::thread::hardware_concurrency())
             : thread_count(_thread_count ? _thread_count : std::thread::hardware_concurrency()),
-              threads(new std::thread[_thread_count ? _thread_count : std::thread::hardware_concurrency()]) {
+              threads(new std::jthread[_thread_count ? _thread_count : std::thread::hardware_concurrency()]) {
         create_threads();
     }
 
@@ -143,7 +144,7 @@ public:
         running = false;
         destroy_threads();
         thread_count = _thread_count ? _thread_count : std::thread::hardware_concurrency();
-        threads = std::make_unique<std::thread[]>(thread_count);
+        threads = std::make_unique<std::jthread[]>(thread_count);
         paused = was_paused;
         running = true;
         create_threads();
@@ -173,6 +174,13 @@ public:
                 }
             }
             catch (...) {
+                try {
+                    if(std::current_exception()) {
+                        std::rethrow_exception(std::current_exception());
+                    }
+                } catch(const std::exception &e) {
+                    spdlog::critical("Thread failed, got exception {}", e.what());
+                }
                 try {
                     task_promise->set_exception(std::current_exception());
                 }
@@ -238,7 +246,7 @@ private:
      */
     void create_threads() {
         for (ui32 i = 0; i < thread_count; i++) {
-            threads[i] = std::thread(&thread_pool::worker, this);
+            threads[i] = std::jthread(&thread_pool::worker, this);
         }
     }
 
@@ -246,9 +254,9 @@ private:
      * @brief Destroy the threads in the pool by joining them.
      */
     void destroy_threads() {
-        for (ui32 i = 0; i < thread_count; i++) {
+        /*for (ui32 i = 0; i < thread_count; i++) {
             threads[i].join();
-        }
+        }*/
     }
 
     /**
@@ -306,7 +314,7 @@ private:
     /**
      * @brief A smart pointer to manage the memory allocated for the threads.
      */
-    std::unique_ptr<std::thread[]> threads;
+    std::unique_ptr<std::jthread[]> threads;
 
     /**
      * @brief An atomic variable to keep track of the total number of unfinished tasks - either still in the queue, or running in a thread.

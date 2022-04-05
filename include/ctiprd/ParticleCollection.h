@@ -66,6 +66,10 @@ public:
         positions_[index] = position;
     }
 
+    const Position &positionOf(size_type index) const {
+        return *positions_[index];
+    }
+
     template<typename T>
     void addParticle(const Position &position, T &&type) requires std::convertible_to<T, std::string_view> {
         addParticle(position, systems::particleTypeId<System::types>(type));
@@ -97,6 +101,7 @@ public:
 
     void removeParticle(size_type index) {
         positions_[index].reset();
+        blanks.push_back(index);
     }
 
     template<typename IteratorAdd, typename IteratorRemove>
@@ -306,19 +311,44 @@ struct ParticleCollectionUpdater {
         toAdd.push_back(std::make_tuple(position, type));
     }
 
+    template<bool check=true>
     void remove(const Index &index, ParticleCollection &collection) {
-        bool expected {false};
-        if(changed[index].compare_exchange_weak(expected, true)) {
+        if constexpr(check) {
+            bool expected{false};
+            if (changed[index].compare_exchange_weak(expected, true)) {
+                std::scoped_lock lock(removeMutex);
+                collection.removeParticle(index);
+            }
+        } else {
             std::scoped_lock lock(removeMutex);
             collection.removeParticle(index);
         }
     }
 
+    bool claim(const Index &index) {
+        bool expected {false};
+        return changed[index].compare_exchange_weak(expected, true);
+    }
+
+    void release(const Index &index) {
+        changed[index] = false;
+    }
+
+    template<bool check=true>
     void directUpdate(const Index &index, const std::optional<ParticleType> &type,
                       const std::optional<Position> &position,
                       ParticleCollection &collection) {
-        bool expected {false};
-        if(changed[index].compare_exchange_weak(expected, true)) {
+        if constexpr(check) {
+            bool expected {false};
+            if(changed[index].compare_exchange_weak(expected, true)) {
+                if(type) {
+                    collection.setType(index, *type);
+                }
+                if(position) {
+                    collection.setPosition(index, *position);
+                }
+            }
+        } else {
             if(type) {
                 collection.setType(index, *type);
             }
