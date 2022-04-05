@@ -68,7 +68,7 @@ struct LotkaVolterra {
         }
     }
 
-    static constexpr ParticleTypes<dtype, 3> types{{
+    static constexpr ParticleTypes<dtype, 2> types{{
                                                            {
                                                                    .name = "predator",
                                                                    .diffusionConstant = 1.
