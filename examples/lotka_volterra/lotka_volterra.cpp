@@ -3,6 +3,7 @@
 //
 
 #include <pybind11/numpy.h>
+#include <pybind11/stl.h>
 
 #include <ctiprd/systems/lotka_volterra.h>
 #include <ctiprd/progressbar.hpp>
@@ -15,9 +16,7 @@ template<typename dtype>
 using np_array = py::array_t<dtype, py::array::c_style | py::array::forcecast>;
 
 PYBIND11_MODULE(lv_mod, m) {
-    m.def("simulate", [] (int njobs) {
-        std::size_t nSteps = 100000;
-
+    m.def("simulate", [] (std::size_t nSteps, int njobs) {
         System system {};
         auto pool = ctiprd::config::make_pool(njobs);
         auto integrator = ctiprd::integrator::EulerMaruyama{system, pool};
@@ -34,32 +33,39 @@ PYBIND11_MODULE(lv_mod, m) {
             }
         }
 
-        // np_array<float> out {{nSteps, static_cast<std::size_t>(integrator.particles()->nParticles()), static_cast<std::size_t>(2)}};
+        std::vector<std::tuple<np_array<float>, np_array<std::size_t>>> trajectory;
 
         progressbar bar(static_cast<int>(nSteps));
         for(std::size_t t = 0; t < nSteps; ++t) {
+            py::gil_scoped_release gilScopedRelease;
             integrator.step(1e-2);
 
-            if(t % 50 == 0) {
+            if(t % 200 == 0) {
+                py::gil_scoped_acquire gil;
+                trajectory.push_back(std::make_tuple(
+                        np_array<float>{std::vector<std::size_t>{integrator.particles()->nParticles(), 2}},
+                        np_array<std::size_t>{std::vector<std::size_t>(1, integrator.particles()->nParticles())}));
                 std::size_t nPredator {}, nPrey {};
+                std::size_t ix = 0;
                 for (std::size_t i = 0; i < integrator.particles()->size(); ++i) {
                     if (integrator.particles()->exists(i)) {
+                        std::get<0>(trajectory.back()).mutable_at(ix, 0) = integrator.particles()->positionOf(i)[0];
+                        std::get<0>(trajectory.back()).mutable_at(ix, 1) = integrator.particles()->positionOf(i)[1];
+                        std::get<1>(trajectory.back()).mutable_at(ix) = integrator.particles()->typeOf(i);
                         if (integrator.particles()->typeOf(i) == System::preyId) {
                             ++nPrey;
                         } else {
                             ++nPredator;
                         }
+                        ++ix;
                     }
                 }
 
                 spdlog::critical("nPrey = {}, nPredator = {}", nPrey, nPredator);
             }
-
-
-
             bar.update();
         }
 
-        // return out;
+        return trajectory;
     });
 }
