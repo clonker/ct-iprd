@@ -136,7 +136,7 @@ public:
     }
 
     [[nodiscard]] bool exists(std::size_t ix) const {
-        return positions_[ix];
+        return positions_[ix].has_value();
     }
 
     template<typename F, typename Pool,
