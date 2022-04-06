@@ -7,8 +7,9 @@
 #include <ctiprd/progressbar.hpp>
 
 namespace nb = nanobind;
-template<typename T>
-using np_array = ctiprd::binding::np_array<T>;
+
+template<typename T, std::size_t... shape>
+using np_array = ctiprd::binding::np_array<T, shape...>;
 
 using System = ctiprd::systems::LotkaVolterra<float>;
 
@@ -33,7 +34,7 @@ NB_MODULE(lv_mod, m) {
             }
         }
 
-        std::vector<std::tuple<ctiprd::binding::np_array<float>, ctiprd::binding::np_array<std::size_t>>> trajectory;
+        std::vector<std::tuple<np_array<float, nb::any, 2>, np_array<std::size_t, nb::any>>> trajectory;
 
         {
             nb::gil_scoped_release release;
@@ -43,15 +44,15 @@ NB_MODULE(lv_mod, m) {
                 if (t % 200 == 0) {
                     nb::gil_scoped_acquire acquire;
                     trajectory.emplace_back(
-                            np_array<float>{std::vector<std::size_t>{integrator.particles()->nParticles(), 2}},
-                            np_array<std::size_t>{std::vector<std::size_t>(1, integrator.particles()->nParticles())});
+                            np_array<float, nb::any, 2>{},
+                            np_array<std::size_t, nb::any>{});
                     std::size_t nPredator{}, nPrey{};
                     std::size_t ix = 0;
                     for (std::size_t i = 0; i < integrator.particles()->size(); ++i) {
                         if (integrator.particles()->exists(i)) {
-                            std::get<0>(trajectory.back()).mutable_at(ix, 0) = integrator.particles()->positionOf(i)[0];
-                            std::get<0>(trajectory.back()).mutable_at(ix, 1) = integrator.particles()->positionOf(i)[1];
-                            std::get<1>(trajectory.back()).mutable_at(ix) = integrator.particles()->typeOf(i);
+                            std::get<0>(trajectory.back())(ix, 0) = integrator.particles()->positionOf(i)[0];
+                            std::get<0>(trajectory.back())(ix, 1) = integrator.particles()->positionOf(i)[1];
+                            std::get<1>(trajectory.back())(ix) = integrator.particles()->typeOf(i);
                             if (integrator.particles()->typeOf(i) == System::preyId) {
                                 ++nPrey;
                             } else {
@@ -66,7 +67,7 @@ NB_MODULE(lv_mod, m) {
                 if(t % 50 == 0) {
                     nb::gil_scoped_acquire acquire;
                     if (PyErr_CheckSignals() != 0) {
-                        throw nb::error_already_set();
+                        throw nb::python_error();
                     }
                 }
             }
