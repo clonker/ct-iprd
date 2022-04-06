@@ -2,6 +2,9 @@
 // Created by mho on 4/5/22.
 //
 
+#include <nanobind/stl/vector.h>
+#include <nanobind/stl/tuple.h>
+
 #include <ctiprd/systems/lotka_volterra.h>
 #include <ctiprd/binding/system_bindings.h>
 #include <ctiprd/progressbar.hpp>
@@ -43,6 +46,7 @@ NB_MODULE(lv_mod, m) {
 
                 if (t % 200 == 0) {
                     nb::gil_scoped_acquire acquire;
+
                     trajectory.emplace_back(
                             np_array<float, nb::any, 2>{},
                             np_array<std::size_t, nb::any>{});
