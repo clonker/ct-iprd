@@ -2,21 +2,20 @@
 // Created by mho on 4/5/22.
 //
 
-#include <pybind11/numpy.h>
-#include <pybind11/stl.h>
-#include <pybind11/functional.h>
-
 #include <ctiprd/systems/lotka_volterra.h>
+#include <ctiprd/binding/system_bindings.h>
 #include <ctiprd/progressbar.hpp>
 
-namespace py = pybind11;
+namespace nb = nanobind;
+template<typename T>
+using np_array = ctiprd::binding::np_array<T>;
 
 using System = ctiprd::systems::LotkaVolterra<float>;
 
-template<typename dtype>
-using np_array = py::array_t<dtype, py::array::c_style | py::array::forcecast>;
+NB_MODULE(lv_mod, m) {
 
-PYBIND11_MODULE(lv_mod, m) {
+    ctiprd::binding::exportSystem<System>(m, "LotkaVolterra");
+
     m.def("simulate", [] (std::size_t nSteps, float dt, int njobs, std::function<void(std::size_t)> progressCallback) {
         System system {};
         auto pool = ctiprd::config::make_pool(njobs);
@@ -34,15 +33,15 @@ PYBIND11_MODULE(lv_mod, m) {
             }
         }
 
-        std::vector<std::tuple<np_array<float>, np_array<std::size_t>>> trajectory;
+        std::vector<std::tuple<ctiprd::binding::np_array<float>, ctiprd::binding::np_array<std::size_t>>> trajectory;
 
         {
-            py::gil_scoped_release release;
+            nb::gil_scoped_release release;
             for (std::size_t t = 0; t < nSteps; ++t) {
                 integrator.step(dt);
 
                 if (t % 200 == 0) {
-                    py::gil_scoped_acquire acquire;
+                    nb::gil_scoped_acquire acquire;
                     trajectory.emplace_back(
                             np_array<float>{std::vector<std::size_t>{integrator.particles()->nParticles(), 2}},
                             np_array<std::size_t>{std::vector<std::size_t>(1, integrator.particles()->nParticles())});
@@ -65,9 +64,9 @@ PYBIND11_MODULE(lv_mod, m) {
                 }
 
                 if(t % 50 == 0) {
-                    py::gil_scoped_acquire acquire;
+                    nb::gil_scoped_acquire acquire;
                     if (PyErr_CheckSignals() != 0) {
-                        throw py::error_already_set();
+                        throw nb::error_already_set();
                     }
                 }
             }

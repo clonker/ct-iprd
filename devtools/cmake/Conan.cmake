@@ -38,6 +38,7 @@ macro(run_conan)
         set(LIST_OF_BUILD_TYPES ${CMAKE_CONFIGURATION_TYPES})
     endif()
 
+    message(STATUS "Running conan for build types ${LIST_OF_BUILD_TYPES}")
     foreach(TYPE ${LIST_OF_BUILD_TYPES})
         message(STATUS "Running Conan for build type '${TYPE}'")
 
