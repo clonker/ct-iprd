@@ -17,7 +17,7 @@ NB_MODULE(lv_mod, m) {
     ctiprd::binding::exportBaseTypes<System::dtype>(m);
     ctiprd::binding::exportSystem<System>(m, "LotkaVolterra");
 
-    m.def("simulate", [] (std::size_t nSteps, float dt, int njobs, const std::function<void(std::size_t)>& progressCallback) {
+    m.def("simulate", [] (std::size_t nSteps, float dt, int njobs, nb::handle progressCallback) {
         System system {};
         auto pool = ctiprd::config::make_pool(njobs);
         auto integrator = ctiprd::integrator::EulerMaruyama{system, pool};
