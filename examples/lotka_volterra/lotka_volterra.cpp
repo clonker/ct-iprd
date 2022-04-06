@@ -47,6 +47,7 @@ NB_MODULE(lv_mod, m) {
                 if (t % 200 == 0) {
                     nb::gil_scoped_acquire acquire;
 
+                    // todo initialize properly, see https://github.com/wjakob/nanobind/blob/master/docs/tensor.md
                     trajectory.emplace_back(
                             np_array<float, nb::any, 2>{},
                             np_array<std::size_t, nb::any>{});
