@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.21)
 project(ct-iprd LANGUAGES C CXX VERSION 0.0.0)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -16,6 +16,10 @@ if(CT_IPRD_CUDA)
     set(CMAKE_CUDA_STANDARD_REQUIRED ON)
     set(CMAKE_CUDA_EXTENSIONS OFF)
     find_package(CUDAToolkit REQUIRED)
+
+    if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+        set(CMAKE_CUDA_ARCHITECTURES 75)
+    endif()
 endif()
 
 if(NOT CMAKE_BUILD_TYPE)
