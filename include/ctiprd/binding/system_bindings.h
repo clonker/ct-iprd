@@ -8,6 +8,8 @@
 #include <vector>
 #include <string_view>
 
+#include <fmt/format.h>
+
 #include <nanobind/nanobind.h>
 #include <nanobind/tensor.h>
 #include <nanobind/stl/vector.h>
@@ -23,25 +25,30 @@ using np_array = nb::tensor<dtype, nb::shape<shape...>, nb::numpy, nb::c_contig,
 template<typename dtype>
 void exportBaseTypes(nb::module_ &module) {
     nb::class_<ParticleType<dtype>>(module, "ParticleType")
-        .template def_readonly("name", &ParticleType<dtype>::name)
+        .def("__str__", [](const ParticleType<dtype> &self) {
+            return fmt::format("ParticleType[name={}, D={:.3f}]", self.name, self.diffusionConstant);
+        })
+        .template def_property_readonly("name", [](const ParticleType<dtype> &self) {
+            return std::string(self.name);
+        })
         .template def_readonly("diffusion_constant", &ParticleType<dtype>::diffusionConstant);
 
     nb::class_<reactions::doi::Catalysis<dtype>>(module, "Catalysis")
             .template def_readwrite("catalyst", &reactions::doi::Catalysis<dtype>::catalyst)
-            .template def_readwrite("eductType", &reactions::doi::Catalysis<dtype>::eductType)
-            .template def_readwrite("productType", &reactions::doi::Catalysis<dtype>::productType)
-            .template def_readwrite("reactionRadius", &reactions::doi::Catalysis<dtype>::reactionRadius)
+            .template def_readwrite("educt_type", &reactions::doi::Catalysis<dtype>::eductType)
+            .template def_readwrite("product_type", &reactions::doi::Catalysis<dtype>::productType)
+            .template def_readwrite("reaction_radius", &reactions::doi::Catalysis<dtype>::reactionRadius)
             .template def_readwrite("rate", &reactions::doi::Catalysis<dtype>::rate);
 
     nb::class_<reactions::doi::Decay<dtype>>(module, "Decay")
-            .template def_readwrite("eductType", &reactions::doi::Decay<dtype>::eductType)
+            .template def_readwrite("educt_type", &reactions::doi::Decay<dtype>::eductType)
             .template def_readwrite("rate", &reactions::doi::Decay<dtype>::rate);
 
     nb::class_<reactions::doi::Fusion<dtype>>(module, "Fusion")
-            .template def_readwrite("eductType1", &reactions::doi::Fusion<dtype>::eductType1)
-            .template def_readwrite("eductType2", &reactions::doi::Fusion<dtype>::eductType2)
-            .template def_readwrite("productType", &reactions::doi::Fusion<dtype>::productType)
-            .template def_readwrite("reactionRadius", &reactions::doi::Fusion<dtype>::reactionRadius)
+            .template def_readwrite("educt_type_1", &reactions::doi::Fusion<dtype>::eductType1)
+            .template def_readwrite("educt_type_2", &reactions::doi::Fusion<dtype>::eductType2)
+            .template def_readwrite("product_type", &reactions::doi::Fusion<dtype>::productType)
+            .template def_readwrite("reaction_radius", &reactions::doi::Fusion<dtype>::reactionRadius)
             .template def_readwrite("rate", &reactions::doi::Fusion<dtype>::rate)
             .template def_readwrite("w1", &reactions::doi::Fusion<dtype>::w1)
             .template def_readwrite("w2", &reactions::doi::Fusion<dtype>::w2);
