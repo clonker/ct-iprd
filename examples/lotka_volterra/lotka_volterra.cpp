@@ -2,6 +2,8 @@
 // Created by mho on 4/5/22.
 //
 
+#include <memory>
+
 #include <nanobind/stl/vector.h>
 #include <nanobind/stl/tuple.h>
 
@@ -47,10 +49,21 @@ NB_MODULE(lv_mod, m) {
                 if (t % 200 == 0) {
                     nb::gil_scoped_acquire acquire;
 
-                    // todo initialize properly, see https://github.com/wjakob/nanobind/blob/master/docs/tensor.md
+                    auto nParticles = integrator.particles()->nParticles();
+                    auto* ptrTraj = new float[2 * nParticles];
+                    auto* ptrTypes = new std::size_t[nParticles];
+                    nb::capsule deleterTraj(ptrTraj, [](void *data) {
+                        delete[] (float *) data;
+                    });
+                    nb::capsule deleterTypes(ptrTypes, [](void *data) {
+                        delete[] (std::size_t *) data;
+                    });
+
+                    std::size_t shapeTraj[2] = {nParticles, 2};
+                    std::size_t shapeTypes[1] = {nParticles};
                     trajectory.emplace_back(
-                            np_array<float, nb::any, 2>{},
-                            np_array<std::size_t, nb::any>{});
+                            np_array<float, nb::any, 2>{ptrTraj, 2, shapeTraj, deleterTraj},
+                            np_array<std::size_t, nb::any>{ptrTypes, 1, shapeTypes, deleterTypes});
                     std::size_t nPredator{}, nPrey{};
                     std::size_t ix = 0;
                     for (std::size_t i = 0; i < integrator.particles()->size(); ++i) {
