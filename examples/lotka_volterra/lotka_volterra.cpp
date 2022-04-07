@@ -19,7 +19,7 @@ NB_MODULE(lv_mod, m) {
     ctiprd::binding::exportBaseTypes<System::dtype>(m);
     ctiprd::binding::exportSystem<System>(m, "LotkaVolterra");
 
-    m.def("simulate", [] (std::size_t nSteps, float dt, int njobs, nb::handle progressCallback) {
+    m.def("simulate", [] (std::size_t nSteps, float dt, int njobs, int nPrey, int nPredator, nb::handle progressCallback) {
         System system {};
         auto pool = ctiprd::config::make_pool(njobs);
         auto integrator = ctiprd::integrator::EulerMaruyama{system, pool};
@@ -28,10 +28,10 @@ NB_MODULE(lv_mod, m) {
             auto &generator = ctiprd::rnd::staticThreadLocalGenerator();
             std::uniform_real_distribution<float> d1 {-System::boxSize[0] / 2, System::boxSize[0] / 2};
             std::uniform_real_distribution<float> d2 {-System::boxSize[1] / 2, System::boxSize[1] / 2};
-            for (int n = 0; n < 9600; ++n) {
+            for (int n = 0; n < nPrey; ++n) {
                 integrator.particles()->addParticle({{d1(generator), d2(generator)}}, "prey");
             }
-            for (int n = 0; n < 9600; ++n) {
+            for (int n = 0; n < nPredator; ++n) {
                 integrator.particles()->addParticle({{d1(generator), d2(generator)}}, "predator");
             }
         }

@@ -26,9 +26,6 @@ using np_array = nb::tensor<dtype, nb::shape<shape...>, nb::numpy, nb::c_contig,
 template<typename dtype>
 void exportBaseTypes(nb::module_ &module) {
     nb::class_<ParticleType<dtype>>(module, "ParticleType")
-        /*.def("__str__", [](const ParticleType<dtype> &self) {
-            return fmt::format("ParticleType[name={}, D={:.3f}]", self.name, self.diffusionConstant);
-        })*/
         .template def_property_readonly("name", [](const ParticleType<dtype> &self) {
             return std::string(self.name);
         })
