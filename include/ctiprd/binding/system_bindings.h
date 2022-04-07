@@ -16,7 +16,7 @@ namespace ctiprd::binding {
 namespace nb = nanobind;
 
 template<typename dtype, std::size_t... shape>
-using np_array = nb::tensor<dtype, nb::shape<shape...>, nb::c_contig, nb::device::cpu>;
+using np_array = nb::tensor<dtype, nb::shape<shape...>, nb::numpy, nb::c_contig, nb::device::cpu>;
 
 template<typename dtype>
 void exportBaseTypes(nb::module_ &module) {
