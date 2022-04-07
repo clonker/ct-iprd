@@ -10,6 +10,8 @@
 
 #include <nanobind/nanobind.h>
 #include <nanobind/tensor.h>
+#include <nanobind/stl/vector.h>
+#include <nanobind/stl/tuple.h>
 
 namespace ctiprd::binding {
 
@@ -23,21 +25,48 @@ void exportBaseTypes(nb::module_ &module) {
     nb::class_<ParticleType<dtype>>(module, "ParticleType")
         .template def_readonly("name", &ParticleType<dtype>::name)
         .template def_readonly("diffusion_constant", &ParticleType<dtype>::diffusionConstant);
+
+    nb::class_<reactions::doi::Catalysis<dtype>>(module, "Catalysis")
+            .template def_readwrite("catalyst", &reactions::doi::Catalysis<dtype>::catalyst)
+            .template def_readwrite("eductType", &reactions::doi::Catalysis<dtype>::eductType)
+            .template def_readwrite("productType", &reactions::doi::Catalysis<dtype>::productType)
+            .template def_readwrite("reactionRadius", &reactions::doi::Catalysis<dtype>::reactionRadius)
+            .template def_readwrite("rate", &reactions::doi::Catalysis<dtype>::rate);
+
+    nb::class_<reactions::doi::Decay<dtype>>(module, "Decay")
+            .template def_readwrite("eductType", &reactions::doi::Decay<dtype>::eductType)
+            .template def_readwrite("rate", &reactions::doi::Decay<dtype>::rate);
+
+    nb::class_<reactions::doi::Fusion<dtype>>(module, "Fusion")
+            .template def_readwrite("eductType1", &reactions::doi::Fusion<dtype>::eductType1)
+            .template def_readwrite("eductType2", &reactions::doi::Fusion<dtype>::eductType2)
+            .template def_readwrite("productType", &reactions::doi::Fusion<dtype>::productType)
+            .template def_readwrite("reactionRadius", &reactions::doi::Fusion<dtype>::reactionRadius)
+            .template def_readwrite("rate", &reactions::doi::Fusion<dtype>::rate)
+            .template def_readwrite("w1", &reactions::doi::Fusion<dtype>::w1)
+            .template def_readwrite("w2", &reactions::doi::Fusion<dtype>::w2);
+
 }
 
 template<typename System>
 void exportSystem(nb::module_ &module, std::string_view name) {
     std::string strName {name};
-    auto clazz = nb::class_<System>(module, strName.c_str());
+    auto clazz = nb::class_<System>(module, strName.c_str()).def(nb::init<>());
     clazz.template def_readonly_static("periodic", &System::periodic);
     clazz.template def_readonly_static("dim", &System::DIM);
     clazz.template def_property_readonly("box_size", [](const System &self) {
-        np_array<typename System::dtype, System::DIM> out {};
-        std::copy(begin(self.boxSize), end(self.boxSize), reinterpret_cast<typename System::dtype*>(out.data()));
+        std::vector<typename System::dtype> out {begin(self.boxSize), end(self.boxSize)};
         return out;
     });
-    clazz.template def_readonly_static("particle_types", &System::types);
-
+    clazz.template def_property_readonly("particle_types", [](const System &self) {
+        return std::vector {begin(self.types), end(self.types)};
+    });
+    clazz.template def_property_readonly("reactions_o1", [](const System &self) {
+        return self.reactionsO1;
+    });
+    clazz.template def_property_readonly("reactions_o2", [](const System &self) {
+        return self.reactionsO2;
+    });
 }
 
 }
