@@ -17,28 +17,14 @@ run_conan()
 include(${CMAKE_CURRENT_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup(TARGETS)
 
-# Constrain FindPython to find the Python version used by scikit-build
-if (SKBUILD)
-    message(STATUS "Python_VERSION ${PYTHON_VERSION_STRING}")
-    message(STATUS "Python_EXECUTABLE ${PYTHON_EXECUTABLE}")
-    message(STATUS "Python_INCLUDE_DIR ${PYTHON_INCLUDE_DIR}")
-    message(STATUS "Python_LIBRARIES ${PYTHON_LIBRARY}")
-    set(Python_VERSION "${PYTHON_VERSION_STRING}")
-    set(Python_EXECUTABLE "${PYTHON_EXECUTABLE}")
-    set(Python_INCLUDE_DIR "${PYTHON_INCLUDE_DIR}")
-    set(Python_LIBRARIES "${PYTHON_LIBRARY}")
-endif()
-find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
-
 if(MSVC)
     add_compile_options(/W3 /EHsc /bigobj /permissive-)
 endif()
 
-add_subdirectory(contrib/nanobind)
-
 find_package(fmt REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(Threads REQUIRED)
+find_package(pybind11 REQUIRED)
 
 add_library(${PROJECT_NAME} INTERFACE)
 target_include_directories(${PROJECT_NAME} INTERFACE include)
