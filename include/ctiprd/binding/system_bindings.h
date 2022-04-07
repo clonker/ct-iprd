@@ -75,7 +75,7 @@ void exportSystem(nb::module_ &module, std::string_view name) {
     });
     clazz.template def_property_readonly("particle_types", [](const System &self) {
         return std::vector {begin(self.types), end(self.types)};
-    }, nb::rv_policy::reference_internal);
+    }, nb::rv_policy::copy);
     clazz.template def_property_readonly("reactions_o1", [](const System &self) {
         return self.reactionsO1;
     }, nb::rv_policy::reference_internal);
