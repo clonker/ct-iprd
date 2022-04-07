@@ -37,8 +37,8 @@ struct Decay {
     constexpr static std::size_t N_EDUCTS = 1;
     constexpr static std::size_t N_PRODUCTS = 0;
 
-    std::size_t eductType;
-    dtype rate;
+    std::size_t eductType {};
+    dtype rate {};
 };
 
 template<typename dtype>
@@ -47,9 +47,9 @@ struct Conversion{
     constexpr static std::size_t N_EDUCTS = 1;
     constexpr static std::size_t N_PRODUCTS = 1;
 
-    std::size_t eductType;
-    std::size_t productType;
-    dtype rate;
+    std::size_t eductType {};
+    std::size_t productType {};
+    dtype rate {};
 };
 
 template<typename dtype>
@@ -58,10 +58,11 @@ struct Fission {
     constexpr static std::size_t N_EDUCTS = 1;
     constexpr static std::size_t N_PRODUCTS = 2;
 
-    std::size_t eductType;
-    std::size_t productType1, productType2;
-    dtype productDistance;
-    dtype rate;
+    std::size_t eductType {};
+    std::size_t productType1 {};
+    std::size_t productType2 {};
+    dtype productDistance {};
+    dtype rate {};
 };
 
 template<typename dtype>
@@ -70,11 +71,11 @@ struct Fusion {
     constexpr static std::size_t N_EDUCTS = 2;
     constexpr static std::size_t N_PRODUCTS = 1;
 
-    std::size_t eductType1;
-    std::size_t eductType2;
-    std::size_t productType;
-    dtype reactionRadius;
-    dtype rate;
+    std::size_t eductType1 {};
+    std::size_t eductType2 {};
+    std::size_t productType {};
+    dtype reactionRadius {};
+    dtype rate {};
     dtype w1 {.5};
     dtype w2 {.5};
 };
@@ -85,11 +86,11 @@ struct Catalysis {
     constexpr static std::size_t N_EDUCTS = 2;
     constexpr static std::size_t N_PRODUCTS = 2;
 
-    std::size_t catalyst;
-    std::size_t eductType;
-    std::size_t productType;
-    dtype reactionRadius;
-    dtype rate;
+    std::size_t catalyst {};
+    std::size_t eductType {};
+    std::size_t productType {};
+    dtype reactionRadius {};
+    dtype rate {};
 };
 
 }

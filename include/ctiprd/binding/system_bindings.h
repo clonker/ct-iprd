@@ -46,6 +46,13 @@ void exportBaseTypes(nb::module_ &module) {
             .template def_readwrite("w1", &reactions::doi::Fusion<dtype>::w1)
             .template def_readwrite("w2", &reactions::doi::Fusion<dtype>::w2);
 
+    nb::class_<reactions::doi::Fission<dtype>>(module, "Fission")
+            .template def_readwrite("educt_type", &reactions::doi::Fission<dtype>::eductType)
+            .template def_readwrite("product_type_1", &reactions::doi::Fission<dtype>::productType1)
+            .template def_readwrite("product_type_2", &reactions::doi::Fission<dtype>::productType2)
+            .template def_readwrite("product_distance", &reactions::doi::Fission<dtype>::productDistance)
+            .template def_readwrite("rate", &reactions::doi::Fission<dtype>::rate);
+
 }
 
 template<typename System>
