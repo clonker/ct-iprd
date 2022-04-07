@@ -43,7 +43,7 @@ struct LotkaVolterra {
                     .eductType = preyId,
                     .productType1 = preyId,
                     .productType2 = preyId,
-                    .productDistance = .5,
+                    .productDistance = 1.,
                     .rate = 2
             };
             std::get<1>(reactionsO1) = reactions::doi::Decay<T>{
@@ -71,7 +71,7 @@ struct LotkaVolterra {
                     .eductType = preyId,
                     .productType = predatorId,
                     .reactionRadius = 0.3,
-                    .rate = 19.371705844861612
+                    .rate = 0.4802773599751755
             };
         }
         {
