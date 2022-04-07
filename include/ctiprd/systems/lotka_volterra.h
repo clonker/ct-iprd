@@ -27,11 +27,11 @@ struct LotkaVolterra {
     static constexpr ParticleTypes<dtype, 2> types{{
               {
                       .name = "predator",
-                      .diffusionConstant = 1.
+                      .diffusionConstant = .1
               },
               {
                       .name = "prey",
-                      .diffusionConstant = 1.
+                      .diffusionConstant = .1
               },
     }};
     static constexpr std::size_t preyId = particleTypeId<types>("prey");
@@ -43,12 +43,12 @@ struct LotkaVolterra {
                     .eductType = preyId,
                     .productType1 = preyId,
                     .productType2 = preyId,
-                    .productDistance = .1,
-                    .rate = 0.004
+                    .productDistance = .5,
+                    .rate = 2
             };
             std::get<1>(reactionsO1) = reactions::doi::Decay<T>{
                     .eductType = predatorId,
-                    .rate = 0.003
+                    .rate = 1.5
             };
         }
         {
@@ -56,20 +56,22 @@ struct LotkaVolterra {
                     .eductType1 = preyId,
                     .eductType2 = preyId,
                     .productType = preyId,
-                    .rate = 1e-5
+                    .reactionRadius = 0.05,
+                    .rate = 21.112150808892327
             };
             std::get<1>(reactionsO2) = reactions::doi::Fusion<T>{
                     .eductType1 = predatorId,
                     .eductType2 = predatorId,
                     .productType = predatorId,
-                    .rate = 1e-5
+                    .reactionRadius = 0.05,
+                    .rate = 21.112150808892327
             };
             std::get<2>(reactionsO2) = reactions::doi::Catalysis<T>{
                     .catalyst = predatorId,
                     .eductType = preyId,
                     .productType = predatorId,
-                    .reactionRadius = 0.1,
-                    .rate = 0.000477
+                    .reactionRadius = 0.3,
+                    .rate = 19.371705844861612
             };
         }
         {

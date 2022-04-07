@@ -31,10 +31,10 @@ NB_MODULE(lv_mod, m) {
             auto &generator = ctiprd::rnd::staticThreadLocalGenerator();
             std::uniform_real_distribution<float> d1 {-System::boxSize[0] / 2, System::boxSize[0] / 2};
             std::uniform_real_distribution<float> d2 {-System::boxSize[1] / 2, System::boxSize[1] / 2};
-            for (int n = 0; n < 125; ++n) {
+            for (int n = 0; n < 9600; ++n) {
                 integrator.particles()->addParticle({{d1(generator), d2(generator)}}, "prey");
             }
-            for (int n = 0; n < 100; ++n) {
+            for (int n = 0; n < 9600; ++n) {
                 integrator.particles()->addParticle({{d1(generator), d2(generator)}}, "predator");
             }
         }
