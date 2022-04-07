@@ -6,7 +6,8 @@ set(TEST_SRC
         test_particle_collection.cpp
         test_system.cpp
         test_reactions.cpp
-        test_integration.cpp)
+        test_integration.cpp
+        test_cuda.cpp)
 add_executable(tests catch_main.cpp ${TEST_SRC})
 set_target_properties(tests PROPERTIES CXX_VISIBILITY_PRESET hidden)
 
