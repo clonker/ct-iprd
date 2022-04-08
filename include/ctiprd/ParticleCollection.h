@@ -153,14 +153,14 @@ public:
                 const auto &beginPositions, const auto &endPositions,
                 auto itTypes, auto itForces, auto itVelocities
         ) {
-            for (auto itPos = beginPositions; itPos != endPositions; ++itPos, ++startIndex) {
+            for (auto itPos = beginPositions; itPos != endPositions; ++itPos, ++startIndex, ++itTypes) {
                 if (*itPos) {
                     if constexpr(containsForces() && containsVelocities()) {
-                        operation(startIndex, **itPos, *itTypes, *itForces, *itVelocities);
+                        operation(startIndex, **itPos, *itTypes, *(itForces++), *(itVelocities++));
                     } else if constexpr(containsForces() && !containsVelocities()) {
-                        operation(startIndex, **itPos, *itTypes, *itForces);
+                        operation(startIndex, **itPos, *itTypes, *(itForces++));
                     } else if constexpr(!containsForces() && containsVelocities()) {
-                        operation(startIndex, **itPos, *itTypes, *itVelocities);
+                        operation(startIndex, **itPos, *itTypes, *(itVelocities++));
                     } else {
                         operation(startIndex, **itPos, *itTypes);
                     }
@@ -220,14 +220,14 @@ public:
         ) {
             std::vector<R> result;
             result.reserve(std::distance(beginPositions, endPositions));
-            for (auto itPos = beginPositions; itPos != endPositions; ++itPos, ++startIndex) {
+            for (auto itPos = beginPositions; itPos != endPositions; ++itPos, ++startIndex, ++itTypes) {
                 if (*itPos) {
                     if constexpr(containsForces() && containsVelocities()) {
-                        result.push_back(operation(startIndex, **itPos, *itTypes, *itForces, *itVelocities));
+                        result.push_back(operation(startIndex, **itPos, *itTypes, *(itForces++), *(itVelocities++)));
                     } else if constexpr(containsForces() && !containsVelocities()) {
-                        result.push_back(operation(startIndex, **itPos, *itTypes, *itForces));
+                        result.push_back(operation(startIndex, **itPos, *itTypes, *(itForces++)));
                     } else if constexpr(!containsForces() && containsVelocities()) {
-                        result.push_back(operation(startIndex, **itPos, *itTypes, *itVelocities));
+                        result.push_back(operation(startIndex, **itPos, *itTypes, *(itVelocities++)));
                     } else {
                         result.push_back(operation(startIndex, **itPos, *itTypes));
                     }

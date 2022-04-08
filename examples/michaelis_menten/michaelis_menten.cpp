@@ -8,77 +8,18 @@
 #include <pybind11/pytypes.h>
 #include <pybind11/stl.h>
 
+#include <ctiprd/systems/michaelis_menten.h>
+
 #include <ctiprd/integrators/EulerMaruyama.h>
-#include <ctiprd/potentials/external.h>
-#include <ctiprd/ParticleTypes.h>
 #include <ctiprd/reactions/basic.h>
 #include <ctiprd/systems/util.h>
 #include <ctiprd/binding/system_bindings.h>
 
 namespace py = pybind11;
 
-template<typename T>
-struct MichaelisMenten {
-    using dtype = T;
-    static constexpr std::size_t DIM = 3;
-    static constexpr std::array<T, DIM> boxSize{.3, .3, .3};
-    static constexpr bool periodic = true;
-    static constexpr T kBT = 2.43614;
-    static constexpr ctiprd::ParticleTypes<dtype, 4> types{{
-        { .name = "E", .diffusionConstant = 10.},
-        { .name = "S", .diffusionConstant = 10.},
-        { .name = "ES", .diffusionConstant = 10.},
-        { .name = "P", .diffusionConstant = 10.}
-        }};
-    static constexpr std::size_t eId = ctiprd::systems::particleTypeId<types>("E");
-    static constexpr std::size_t sId = ctiprd::systems::particleTypeId<types>("S");
-    static constexpr std::size_t esId = ctiprd::systems::particleTypeId<types>("ES");
-    static constexpr std::size_t pId = ctiprd::systems::particleTypeId<types>("P");
-
-    MichaelisMenten() {
-        {
-            std::get<0>(reactionsO1) = ctiprd::reactions::doi::Fission<T>{
-                    .eductType = esId,
-                    .productType1 = eId,
-                    .productType2 = sId,
-                    .productDistance = .03,
-                    .rate = 1.
-            };
-            std::get<0>(reactionsO1) = ctiprd::reactions::doi::Fission<T>{
-                    .eductType = esId,
-                    .productType1 = eId,
-                    .productType2 = pId,
-                    .productDistance = .03,
-                    .rate = 1.
-            };
-        }
-        {
-            std::get<0>(reactionsO2) = ctiprd::reactions::doi::Fusion<T>{
-                    .eductType1 = eId,
-                    .eductType2 = sId,
-                    .productType = esId,
-                    .reactionRadius = 0.03,
-                    .rate = 86.78638438
-            };
-
-        }
-    }
 
 
-    using ExternalPotentials = std::tuple<>;
-    using PairPotentials = std::tuple<>;
-
-    using ReactionsO1 = std::tuple<ctiprd::reactions::doi::Fission<T>, ctiprd::reactions::doi::Fission<T>>;
-    using ReactionsO2 = std::tuple<ctiprd::reactions::doi::Fusion<T>>;
-
-    ReactionsO1 reactionsO1{};
-    ReactionsO2 reactionsO2{};
-
-    ExternalPotentials externalPotentials{};
-    PairPotentials pairPotentials{};
-};
-
-using System = MichaelisMenten<float>;
+using System = ctiprd::systems::MichaelisMenten<float>;
 
 PYBIND11_MODULE(mm_mod, m) {
     ctiprd::binding::exportBaseTypes<System::dtype>(m);
@@ -111,50 +52,31 @@ PYBIND11_MODULE(mm_mod, m) {
         {
             py::gil_scoped_release release;
             for (std::size_t t = 0; t < nSteps; ++t) {
-                nE.emplace_back(0);
-                nS.emplace_back(0);
-                nES.emplace_back(0);
-                nP.emplace_back(0);
-
-                integrator.particles()->forEachParticle([&m, &nE, &nS, &nES, &nP](const auto &, const auto &, const auto &type,
-                                                                                      const auto &) {
-                    std::size_t nEl {0};
-                    std::size_t nSl {0};
-                    std::size_t nESl {0};
-                    std::size_t nPl {0};
-
-                    if(type == System::eId) {
-                        ++nEl;
-                    } else if(type == System::sId) {
-                        ++nSl;
-                    } else if(type == System::esId) {
-                        ++nESl;
-                    } else if(type == System::pId) {
-                        ++nPl;
-                    }
-
-                    std::scoped_lock lock {m};
-                    {
-                        nE.back() += nEl;
-                        nS.back() += nSl;
-                        nES.back() += nESl;
-                        nP.back() += nPl;
-                    }
-                }, pool);
-                pool->waitForTasks();
 
                 {
-                    std::size_t nEl {0};
-                    for(std::size_t i = 0; i < integrator.particles()->size(); ++i) {
-                        if(integrator.particles()->exists(i)) {
-                            if(integrator.particles()->typeOf(i) == System::eId) {
-                                ++nEl;
-                            }
+                    std::atomic<std::size_t> nEl {0};
+                    std::atomic<std::size_t> nSl {0};
+                    std::atomic<std::size_t> nESl {0};
+                    std::atomic<std::size_t> nPl {0};
+                    integrator.particles()->forEachParticle([&nEl, &nSl, &nESl, &nPl](const auto &id, const auto &, const auto &type,
+                                                                                  const auto &) {
+
+                        if(type == System::eId) {
+                            ++nEl;
+                        } else if(type == System::sId) {
+                            ++nSl;
+                        } else if(type == System::esId) {
+                            ++nESl;
+                        } else if(type == System::pId) {
+                            ++nPl;
                         }
-                    }
-                    if(nEl != nE.back()) {
-                        throw std::runtime_error(fmt::format("shice {} != {}", nEl, nE.back()));
-                    }
+                    }, pool);
+                    pool->waitForTasks();
+
+                    nE.emplace_back(nEl.load());
+                    nS.emplace_back(nSl.load());
+                    nES.emplace_back(nESl.load());
+                    nP.emplace_back(nPl.load());
                 }
 
                 integrator.step(dt);
