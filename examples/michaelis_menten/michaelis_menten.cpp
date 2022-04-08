@@ -4,6 +4,7 @@
 
 #include <pybind11/pybind11.h>
 #include <pybind11/pytypes.h>
+#include <pybind11/stl.h>
 
 #include <ctiprd/integrators/EulerMaruyama.h>
 #include <ctiprd/potentials/external.h>
@@ -20,6 +21,7 @@ struct MichaelisMenten {
     static constexpr std::size_t DIM = 3;
     static constexpr std::array<T, DIM> boxSize{.3, .3, .3};
     static constexpr bool periodic = true;
+    static constexpr T kBT = 2.43614;
     static constexpr ctiprd::ParticleTypes<dtype, 4> types{{
         { .name = "E", .diffusionConstant = 10.},
         { .name = "S", .diffusionConstant = 10.},

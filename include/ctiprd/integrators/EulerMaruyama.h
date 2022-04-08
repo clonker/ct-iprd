@@ -53,7 +53,7 @@ public:
                  typename Particles::Force &force) {
 
             const auto &diffusionConstant = System::types[type].diffusionConstant;
-            auto deterministicDisplacement = force * diffusionConstant * h;
+            auto deterministicDisplacement = force * diffusionConstant * h / System::kBT;
             auto randomDisplacement = noise() * std::sqrt(2 * diffusionConstant * h);
             pos += deterministicDisplacement + randomDisplacement;
 

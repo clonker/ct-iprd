@@ -24,6 +24,7 @@ struct LotkaVolterra {
     static constexpr std::size_t DIM = 2;
     static constexpr std::array<T, DIM> boxSize{10., 50.};
     static constexpr bool periodic = false;
+    static constexpr T kBT = 1.;
     static constexpr ParticleTypes<dtype, 2> types{{
               {
                       .name = "predator",
