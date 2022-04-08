@@ -18,17 +18,99 @@
 
 namespace ctiprd {
 
-namespace particle_collection {
-enum {
-    usePositions = 0b001,
-    useForces = 0b010,
-    useVelocities = 0b100,
+namespace detail {
+
+template<typename Info, typename F>
+struct Loop {
+
+    explicit Loop(F &&f) : operation(std::forward<F>(f)) {}
+
+    template<typename... Args>
+    void operator()(std::size_t startId, std::size_t n, Args&&... args) const {
+        static_assert(sizeof...(args) == 1 + static_cast<int>(Info::positions) + static_cast<int>(Info::velocities) + static_cast<int>(Info::forces));
+        std::tuple iterators {args...};
+        std::tuple<> state;
+        for(std::size_t id = startId; id < startId + n; ++id) {
+            if(*std::get<0>(iterators)) {
+                if constexpr(Info::forces && Info::velocities) {
+                    operation(id, **std::get<0>(iterators), *itTypes, *itForces, *itVelocities);
+                }
+            }
+
+            std::apply([](auto&... it) {
+                (++it, ...);
+            }, std::tuple(iterators));
+        }
+
+        auto loop = [operation = std::forward<F>(op)](
+                auto startIndex,
+                const auto &beginPositions,
+                auto itTypes, auto itForces, auto itVelocities
+        ) {
+
+            for (auto itPos = beginPositions; itPos != endPositions; ++itPos, ++startIndex, ++itTypes) {
+                if (*itPos) {
+                    if constexpr(containsForces() && containsVelocities()) {
+                        operation(startIndex, **itPos, *itTypes, *itForces, *itVelocities);
+                    } else if constexpr(containsForces() && !containsVelocities()) {
+                        operation(startIndex, **itPos, *itTypes, *itForces);
+                    } else if constexpr(!containsForces() && containsVelocities()) {
+                        operation(startIndex, **itPos, *itTypes, *itVelocities);
+                    } else {
+                        operation(startIndex, **itPos, *itTypes);
+                    }
+                }
+
+                if constexpr(containsForces()) {
+                    ++itForces;
+                }
+                if constexpr(containsVelocities()) {
+                    ++itVelocities;
+                }
+            }
+
+        };
+    }
+
+    F operation;
+
 };
 }
 
-template<typename System, int flags = particle_collection::usePositions | particle_collection::useForces>
+namespace particles {
+
+struct forces {};
+struct velocities {};
+struct positions {};
+
+template<typename... args>
+struct Info {
+    static constexpr bool forces = false;
+    static constexpr bool velocities = false;
+    static constexpr bool positions = false;
+};
+
+template<typename... rest> struct Info<forces, rest...> : Info<rest...> {
+    static constexpr bool forces = true;
+};
+
+template<typename... rest> struct Info<velocities, rest...> : Info<rest...> {
+    static constexpr bool velocities = true;
+};
+
+template<typename... rest> struct Info<positions, rest...> : Info<rest...> {
+    static constexpr bool positions = true;
+};
+
+
+}
+
+template<typename System, typename... Args>
 class ParticleCollection {
 public:
+    using Info = particles::Info<Args...>;
+    static_assert(Info::positions, "currently only implemented with positions.");
+
     using dtype = typename System::dtype;
     static constexpr std::size_t DIM = System::DIM;
 
@@ -45,11 +127,9 @@ public:
 
     static constexpr int dim = DIM;
 
-    static constexpr bool containsPositions() { return flags & particle_collection::usePositions; }
-
-    static constexpr bool containsForces() { return flags & particle_collection::useForces; }
-
-    static constexpr bool containsVelocities() { return flags & particle_collection::useVelocities; }
+    static constexpr bool containsPositions() { return Info::positions; }
+    static constexpr bool containsForces() { return Info::forces; }
+    static constexpr bool containsVelocities() { return Info::velocities; }
 
     [[nodiscard]] std::size_t nParticles() const {
         return positions_.size() - blanks.size();
@@ -140,7 +220,7 @@ public:
         return positions_[ix].has_value();
     }
 
-    template<typename F, typename Pool,
+    template<typename Info, typename F, typename Pool,
             typename R=std::invoke_result_t<std::decay_t<F>, std::size_t, Position&, ParticleType, Force&>,
             typename = std::enable_if_t<std::is_void_v<R>>>
     std::vector<std::future<void>> forEachParticle(F &&op, config::PoolPtr<Pool> pool) {
@@ -314,7 +394,7 @@ struct ParticleCollectionUpdater {
     void add(const ParticleType &type, Position &&position) {
         util::pbc::wrapPBC<System>(position);
         std::scoped_lock lock(addMutex);
-        toAdd.push_back(std::make_tuple(std::move(position), type));
+        toAdd.emplace_back(std::move(position), type);
     }
 
     template<bool check=true>

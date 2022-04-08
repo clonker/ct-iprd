@@ -6,7 +6,7 @@
 
 TEST_CASE("Particle collection sanity", "[particles]") {
     using System = ctiprd::systems::DoubleWell<float>;
-    ctiprd::ParticleCollection<System> collection {};
+    ctiprd::ParticleCollection<System, ctiprd::particles::positions, ctiprd::particles::forces> collection {};
     REQUIRE(collection.dim == 2);
     REQUIRE(collection.containsForces() == true);
     REQUIRE(collection.containsPositions() == true);
@@ -16,7 +16,7 @@ TEST_CASE("Particle collection sanity", "[particles]") {
 SCENARIO("Particle collection can have different flags") {
     using System = ctiprd::systems::DoubleWell<float>;
     auto pool = ctiprd::config::make_pool(5);
-    using Collection = ctiprd::ParticleCollection<System>;
+    using Collection = ctiprd::ParticleCollection<System, ctiprd::particles::positions, ctiprd::particles::forces>;
     GIVEN("A particle collection with default flags") {
         Collection collection {};
         THEN("the flags are set up correctly") {
@@ -62,7 +62,7 @@ SCENARIO("Particle collection can have different flags") {
     }
 
     GIVEN("A particle collection with just positions") {
-        ctiprd::ParticleCollection<System, ctiprd::particle_collection::usePositions> collection {};
+        ctiprd::ParticleCollection<System, ctiprd::particles::positions> collection {};
         THEN("the flags are set up correctly") {
             REQUIRE(collection.containsForces() == false);
             REQUIRE(collection.containsPositions() == true);
@@ -71,7 +71,7 @@ SCENARIO("Particle collection can have different flags") {
     }
 
     GIVEN("A particle collection with positions and velocities") {
-        ctiprd::ParticleCollection<System, ctiprd::particle_collection::usePositions | ctiprd::particle_collection::useVelocities> collection {};
+        ctiprd::ParticleCollection<System, ctiprd::particles::positions, ctiprd::particles::velocities> collection {};
         THEN("the flags are set up correctly") {
             REQUIRE(collection.containsForces() == false);
             REQUIRE(collection.containsPositions() == true);

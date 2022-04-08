@@ -29,7 +29,7 @@ public:
     static constexpr std::size_t DIM = System::DIM;
     using dtype = typename System::dtype;
 
-    using Particles = ParticleCollection<System>;
+    using Particles = ParticleCollection<System, ctiprd::particles::positions, ctiprd::particles::forces>;
     static constexpr const char *name = "EulerMaruyama";
 
     explicit EulerMaruyama(const System &system, config::PoolPtr<Pool> pool) :
