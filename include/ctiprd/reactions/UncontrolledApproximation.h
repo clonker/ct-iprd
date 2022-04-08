@@ -196,7 +196,7 @@ struct UncontrolledApproximation {
     void reactions(const System &system, dtype tau, std::shared_ptr<Particles> particles,
                    std::shared_ptr<Pool> pool) {
 
-        using Updater = ParticleCollectionUpdater<Particles>;
+        using Updater = ParticleCollectionUpdater<System, Particles>;
 
         if constexpr(nReactionsO2 > 0) {
             if (!neighborList_) {
@@ -265,7 +265,7 @@ struct UncontrolledApproximation {
 
         {
             std::shuffle(begin(events), end(events), rnd::staticThreadLocalGenerator<Generator>());
-            ParticleCollectionUpdater updater {*particles};
+            Updater updater {*particles};
 
             for(auto it = begin(events); it != end(events); ++it) {
                 (*it)(*particles, updater);

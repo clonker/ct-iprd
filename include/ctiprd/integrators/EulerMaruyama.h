@@ -8,6 +8,7 @@
 #include <ctiprd/potentials/util.h>
 #include <ctiprd/potentials/ForceField.h>
 #include <ctiprd/reactions/UncontrolledApproximation.h>
+#include <ctiprd/util/pbc.h>
 
 namespace ctiprd::integrator {
 
@@ -55,6 +56,8 @@ public:
             auto deterministicDisplacement = force * diffusionConstant * h;
             auto randomDisplacement = noise() * std::sqrt(2 * diffusionConstant * h);
             pos += deterministicDisplacement + randomDisplacement;
+
+            util::pbc::wrapPBC<System>(pos);
         };
 
         particles_->forEachParticle(worker, pool_);

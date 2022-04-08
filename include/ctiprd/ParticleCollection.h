@@ -14,6 +14,7 @@
 #include <ctiprd/vec.h>
 #include <ctiprd/config.h>
 #include "ctiprd/systems/util.h"
+#include "ctiprd/util/pbc.h"
 
 namespace ctiprd {
 
@@ -295,7 +296,7 @@ private:
     std::vector<size_type> blanks;
 };
 
-template<typename ParticleCollection>
+template<typename System, typename ParticleCollection>
 struct ParticleCollectionUpdater {
     using Particles = ParticleCollection;
     using ParticleType = typename ParticleCollection::ParticleType;
@@ -310,9 +311,10 @@ struct ParticleCollectionUpdater {
 
     std::mutex addMutex, removeMutex;
 
-    void add(const ParticleType &type, const Position &position) {
+    void add(const ParticleType &type, Position &&position) {
+        util::pbc::wrapPBC<System>(position);
         std::scoped_lock lock(addMutex);
-        toAdd.push_back(std::make_tuple(position, type));
+        toAdd.push_back(std::make_tuple(std::move(position), type));
     }
 
     template<bool check=true>
@@ -340,7 +342,7 @@ struct ParticleCollectionUpdater {
 
     template<bool check=true>
     void directUpdate(const Index &index, const std::optional<ParticleType> &type,
-                      const std::optional<Position> &position,
+                      std::optional<Position> &&position,
                       ParticleCollection &collection) {
         if constexpr(check) {
             bool expected {false};
@@ -349,6 +351,7 @@ struct ParticleCollectionUpdater {
                     collection.setType(index, *type);
                 }
                 if(position) {
+                    util::pbc::wrapPBC<System>(*position);
                     collection.setPosition(index, *position);
                 }
             }
@@ -357,6 +360,7 @@ struct ParticleCollectionUpdater {
                 collection.setType(index, *type);
             }
             if(position) {
+                util::pbc::wrapPBC<System>(*position);
                 collection.setPosition(index, *position);
             }
         }
