@@ -23,6 +23,6 @@ TEMPLATE_TEST_CASE("Test Integration", "[integration]", ctiprd::systems::DoubleW
     for(std::size_t t = 0; t < nSteps; ++t) {
         integrator.step(1e-2);
 
-        spdlog::debug("{}: n particles {}", t, integrator.particles()->nParticles());
+        // spdlog::debug("{}: n particles {}", t, integrator.particles()->nParticles());
     }
 }

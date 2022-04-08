@@ -18,10 +18,10 @@ namespace ctiprd::nl {
 template<int DIM, bool periodic, typename dtype>
 class NeighborList {
 public:
-    NeighborList(std::array<dtype, DIM> gridSize, dtype interactionRadius)
-            : _gridSize(gridSize) {
+    NeighborList(std::array<dtype, DIM> gridSize, dtype interactionRadius, int nSubdivides = 2)
+            : _gridSize(gridSize), nSubdivides(nSubdivides) {
         for (int i = 0; i < DIM; ++i) {
-            _cellSize[i] = interactionRadius;
+            _cellSize[i] = interactionRadius / nSubdivides;
             if (gridSize[i] <= 0) throw std::invalid_argument("grid sizes must be positive.");
             nCells[i] = gridSize[i] / _cellSize[i];
         }
@@ -77,11 +77,11 @@ public:
         for (int i = 0u; i < DIM; ++i) {
             std::uint32_t begin, end;
             if constexpr(!periodic) {
-                begin = gridPos[i] > 0 ? (gridPos[i] - 1) : gridPos[i];
-                end = gridPos[i] < nCells[i] - 1 ? (gridPos[i] + 2) : gridPos[i] + 1;
+                begin = gridPos[i] >= nSubdivides ? (gridPos[i] - nSubdivides) : 0;
+                end = gridPos[i] < nCells[i] - nSubdivides ? (gridPos[i] + nSubdivides + 1) : nCells[i];
             } else {
-                begin = gridPos[i] > 0 ? gridPos[i] - 1 : nCells[i] - 1;
-                end = (gridPos[i] + 2) % nCells[i];
+                begin = gridPos[i] >= nSubdivides ? gridPos[i] - nSubdivides : (nCells[i]  - gridPos[i]) % nCells[i];
+                end = (gridPos[i] + nSubdivides + 1) % nCells[i];
             }
 
             auto cellPos = gridPos;
@@ -123,6 +123,7 @@ private:
     std::vector<std::size_t> list{};
     util::Index<DIM> _index{};
     std::array<std::uint32_t, DIM> nCells{};
+    int nSubdivides;
 };
 
 }

@@ -4,6 +4,8 @@
 
 #include <memory>
 
+#include <pybind11/stl.h>
+
 #include <ctiprd/systems/lotka_volterra.h>
 #include <ctiprd/binding/system_bindings.h>
 #include <ctiprd/progressbar.hpp>
