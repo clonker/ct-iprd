@@ -13,6 +13,7 @@
 
 #include <ctiprd/vec.h>
 #include <ctiprd/config.h>
+#include <ctiprd/ContainerContainer.h>
 #include "ctiprd/systems/util.h"
 #include "ctiprd/util/pbc.h"
 
@@ -29,47 +30,27 @@ struct Loop {
     void operator()(std::size_t startId, std::size_t n, Args&&... args) const {
         static_assert(sizeof...(args) == 1 + static_cast<int>(Info::positions) + static_cast<int>(Info::velocities) + static_cast<int>(Info::forces));
         std::tuple iterators {args...};
-        std::tuple<> state;
         for(std::size_t id = startId; id < startId + n; ++id) {
             if(*std::get<0>(iterators)) {
                 if constexpr(Info::forces && Info::velocities) {
-                    operation(id, **std::get<0>(iterators), *itTypes, *itForces, *itVelocities);
+                    auto &[itPos, itTypes, itForces, itVelocities] = iterators;
+                    operation(id, **itPos, *itTypes, *itForces, *itVelocities);
+                } else if constexpr(Info::forces && !Info::velocities) {
+                    auto &[itPos, itTypes, itForces] = iterators;
+                    operation(id, **itPos, *itTypes, *itForces);
+                } else if constexpr(!Info::forces && Info::velocities) {
+                    auto &[itPos, itTypes, itVelocities] = iterators;
+                    operation(id, **itPos, *itTypes, *itVelocities);
+                } else {
+                    auto &[itPos, itTypes] = iterators;
+                    operation(id, **itPos, *itTypes);
                 }
             }
 
             std::apply([](auto&... it) {
                 (++it, ...);
-            }, std::tuple(iterators));
+            }, iterators);
         }
-
-        auto loop = [operation = std::forward<F>(op)](
-                auto startIndex,
-                const auto &beginPositions,
-                auto itTypes, auto itForces, auto itVelocities
-        ) {
-
-            for (auto itPos = beginPositions; itPos != endPositions; ++itPos, ++startIndex, ++itTypes) {
-                if (*itPos) {
-                    if constexpr(containsForces() && containsVelocities()) {
-                        operation(startIndex, **itPos, *itTypes, *itForces, *itVelocities);
-                    } else if constexpr(containsForces() && !containsVelocities()) {
-                        operation(startIndex, **itPos, *itTypes, *itForces);
-                    } else if constexpr(!containsForces() && containsVelocities()) {
-                        operation(startIndex, **itPos, *itTypes, *itVelocities);
-                    } else {
-                        operation(startIndex, **itPos, *itTypes);
-                    }
-                }
-
-                if constexpr(containsForces()) {
-                    ++itForces;
-                }
-                if constexpr(containsVelocities()) {
-                    ++itVelocities;
-                }
-            }
-
-        };
     }
 
     F operation;
@@ -220,7 +201,7 @@ public:
         return positions_[ix].has_value();
     }
 
-    template<typename Info, typename F, typename Pool,
+    template<typename F, typename Pool,
             typename R=std::invoke_result_t<std::decay_t<F>, std::size_t, Position&, ParticleType, Force&>,
             typename = std::enable_if_t<std::is_void_v<R>>>
     std::vector<std::future<void>> forEachParticle(F &&op, config::PoolPtr<Pool> pool) {
@@ -228,34 +209,7 @@ public:
         auto granularity = config::threadGranularity(pool);
         futures.reserve(granularity);
 
-        auto loop = [operation = std::forward<F>(op)](
-                auto startIndex,
-                const auto &beginPositions, const auto &endPositions,
-                auto itTypes, auto itForces, auto itVelocities
-        ) {
-            for (auto itPos = beginPositions; itPos != endPositions; ++itPos, ++startIndex, ++itTypes) {
-                if (*itPos) {
-                    if constexpr(containsForces() && containsVelocities()) {
-                        operation(startIndex, **itPos, *itTypes, *itForces, *itVelocities);
-                    } else if constexpr(containsForces() && !containsVelocities()) {
-                        operation(startIndex, **itPos, *itTypes, *itForces);
-                    } else if constexpr(!containsForces() && containsVelocities()) {
-                        operation(startIndex, **itPos, *itTypes, *itVelocities);
-                    } else {
-                        operation(startIndex, **itPos, *itTypes);
-                    }
-                }
-
-                if constexpr(containsForces()) {
-                    ++itForces;
-                }
-                if constexpr(containsVelocities()) {
-                    ++itVelocities;
-                }
-            }
-
-        };
-
+        detail::Loop<Info, F> loop {std::forward<F>(op)};
         auto n = size();
         auto grainSize = n / granularity;
         auto itPos = positions_.begin();
@@ -266,7 +220,7 @@ public:
         std::size_t beginIx = 0;
         for (std::size_t i = 0; i < granularity - 1; ++i) {
             if (itPos != positions_.end()) {
-                futures.push_back(pool->push(loop, beginIx, itPos, itPos + grainSize, itTypes, itForces, itVelocities));
+                futures.push_back(pool->push(loop, beginIx, grainSize, itPos, itTypes, itForces));
             }
             beginIx += grainSize;
             itPos += grainSize;
@@ -279,7 +233,7 @@ public:
             }
         }
         if (itPos != positions_.end()) {
-            futures.push_back(pool->push(loop, beginIx, itPos, positions_.end(), itTypes, itForces, itVelocities));
+            futures.push_back(pool->push(loop, beginIx, std::distance(itPos, end(positions_)), itPos, itTypes, itForces));
         }
 
         return std::move(futures);

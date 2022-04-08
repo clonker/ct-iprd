@@ -42,33 +42,35 @@ struct ForceField {
             neighborList_->update(particles, pool);
         }
 
-        auto worker = [
-                &pot = externalPotentials_,
-                &potPair = pairPotentials_,
-                nl = neighborList_.get(),
-                &data = *particles
-        ]
-                (auto id, typename Particles::Position &pos, const typename Particles::ParticleType &type,
-                 typename Particles::Force &force) {
+        if constexpr(nExternalPotentials > 0 || nPairPotentials > 0) {
+            auto worker = [
+                    &pot = externalPotentials_,
+                    &potPair = pairPotentials_,
+                    nl = neighborList_.get(),
+                    &data = *particles
+            ]
+                    (auto id, typename Particles::Position &pos, const typename Particles::ParticleType &type,
+                     typename Particles::Force &force) {
 
-            std::fill(begin(force.data), end(force.data), static_cast<dtype>(0));
-            std::apply([&pos, &type, &force](auto &&... args) {
-                ((force += args.force(pos, type)), ...);
-            }, pot);
+                std::fill(begin(force.data), end(force.data), static_cast<dtype>(0));
+                std::apply([&pos, &type, &force](auto &&... args) {
+                    ((force += args.force(pos, type)), ...);
+                }, pot);
 
-            if constexpr(nPairPotentials > 0) {
-                nl->forEachNeighbor(id, data, [&pos, &type, &force, &potPair](auto neighborId, const auto &neighborPos,
-                                                                              const auto &neighborType,
-                                                                              const auto &neighborForce) {
-                    std::apply([&pos, &type, &force, &neighborPos, &neighborType](auto &&... args) {
-                        ((force += args.force(pos, type, neighborPos, neighborType)), ...);
-                    }, potPair);
-                });
+                if constexpr(nPairPotentials > 0) {
+                    nl->forEachNeighbor(id, data, [&pos, &type, &force, &potPair](auto neighborId, const auto &neighborPos,
+                                                                                  const auto &neighborType,
+                                                                                  const auto &neighborForce) {
+                        std::apply([&pos, &type, &force, &neighborPos, &neighborType](auto &&... args) {
+                            ((force += args.force(pos, type, neighborPos, neighborType)), ...);
+                        }, potPair);
+                    });
+                }
+            };
+            particles->forEachParticle(worker, pool);
+            if (wait) {
+                pool->waitForTasks();
             }
-        };
-        particles->forEachParticle(worker, pool);
-        if (wait) {
-            pool->waitForTasks();
         }
     }
 
