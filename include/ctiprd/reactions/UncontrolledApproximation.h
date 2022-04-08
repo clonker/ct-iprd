@@ -261,7 +261,6 @@ struct UncontrolledApproximation {
             particles->forEachParticle(worker, pool);
         }
         pool->waitForTasks();
-        spdlog::debug("got reactions {}", events.size());
 
         {
             std::shuffle(begin(events), end(events), rnd::staticThreadLocalGenerator<Generator>());
