@@ -109,15 +109,13 @@ PYBIND11_MODULE(mm_mod, m) {
         {
             py::gil_scoped_release release;
             for (std::size_t t = 0; t < nSteps; ++t) {
-                integrator.step(dt);
-
                 nE.emplace_back();
                 nS.emplace_back();
                 nES.emplace_back();
                 nP.emplace_back();
 
                 integrator.particles()->forEachParticle([&m, &nE, &nS, &nES, &nP](auto id, const auto &pos, const auto &type,
-                                                           const auto &force) {
+                                                                                  const auto &force) {
                     std::size_t nEl {};
                     std::size_t nSl {};
                     std::size_t nESl {};
@@ -143,6 +141,7 @@ PYBIND11_MODULE(mm_mod, m) {
                 }, pool);
                 pool->waitForTasks();
 
+                integrator.step(dt);
                 if (t % 200 == 0) {
                     py::gil_scoped_acquire acquire;
                     progressCallback(t);
