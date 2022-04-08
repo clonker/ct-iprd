@@ -11,15 +11,14 @@ endif()
 
 set(CT_IPRD_CUDA ON CACHE BOOL "Whether to add cuda")
 if(CT_IPRD_CUDA)
+    if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+        set(CMAKE_CUDA_ARCHITECTURES 52 60 61 75 86)
+    endif()
     enable_language(CUDA)
     set(CMAKE_CUDA_STANDARD 17)
     set(CMAKE_CUDA_STANDARD_REQUIRED ON)
     set(CMAKE_CUDA_EXTENSIONS OFF)
     find_package(CUDAToolkit REQUIRED)
-
-    if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-        set(CMAKE_CUDA_ARCHITECTURES 75)
-    endif()
 endif()
 
 if(NOT CMAKE_BUILD_TYPE)
