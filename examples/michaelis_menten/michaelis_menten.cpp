@@ -2,6 +2,8 @@
 #include <tuple>
 #include <optional>
 
+#include <fmt/format.h>
+
 #include <pybind11/pybind11.h>
 #include <pybind11/pytypes.h>
 #include <pybind11/stl.h>
@@ -109,17 +111,17 @@ PYBIND11_MODULE(mm_mod, m) {
         {
             py::gil_scoped_release release;
             for (std::size_t t = 0; t < nSteps; ++t) {
-                nE.emplace_back();
-                nS.emplace_back();
-                nES.emplace_back();
-                nP.emplace_back();
+                nE.emplace_back(0);
+                nS.emplace_back(0);
+                nES.emplace_back(0);
+                nP.emplace_back(0);
 
-                integrator.particles()->forEachParticle([&m, &nE, &nS, &nES, &nP](auto id, const auto &pos, const auto &type,
-                                                                                      const auto &force) {
-                    std::size_t nEl {};
-                    std::size_t nSl {};
-                    std::size_t nESl {};
-                    std::size_t nPl {};
+                integrator.particles()->forEachParticle([&m, &nE, &nS, &nES, &nP](const auto &, const auto &, const auto &type,
+                                                                                      const auto &) {
+                    std::size_t nEl {0};
+                    std::size_t nSl {0};
+                    std::size_t nESl {0};
+                    std::size_t nPl {0};
 
                     if(type == System::eId) {
                         ++nEl;
@@ -131,8 +133,8 @@ PYBIND11_MODULE(mm_mod, m) {
                         ++nPl;
                     }
 
+                    std::scoped_lock lock {m};
                     {
-                        std::scoped_lock lock {m};
                         nE.back() += nEl;
                         nS.back() += nSl;
                         nES.back() += nESl;
@@ -151,7 +153,7 @@ PYBIND11_MODULE(mm_mod, m) {
                         }
                     }
                     if(nEl != nE.back()) {
-                        throw std::runtime_error("shice");
+                        throw std::runtime_error(fmt::format("shice {} != {}", nEl, nE.back()));
                     }
                 }
 
