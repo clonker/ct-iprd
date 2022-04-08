@@ -115,7 +115,7 @@ PYBIND11_MODULE(mm_mod, m) {
                 nP.emplace_back();
 
                 integrator.particles()->forEachParticle([&m, &nE, &nS, &nES, &nP](auto id, const auto &pos, const auto &type,
-                                                                                  const auto &force) {
+                                                                                      const auto &force) {
                     std::size_t nEl {};
                     std::size_t nSl {};
                     std::size_t nESl {};
@@ -140,6 +140,20 @@ PYBIND11_MODULE(mm_mod, m) {
                     }
                 }, pool);
                 pool->waitForTasks();
+
+                {
+                    std::size_t nEl {0};
+                    for(std::size_t i = 0; i < integrator.particles()->size(); ++i) {
+                        if(integrator.particles()->exists(i)) {
+                            if(integrator.particles()->typeOf(i) == System::eId) {
+                                ++nEl;
+                            }
+                        }
+                    }
+                    if(nEl != nE.back()) {
+                        throw std::runtime_error("shice");
+                    }
+                }
 
                 integrator.step(dt);
                 if (t % 200 == 0) {
