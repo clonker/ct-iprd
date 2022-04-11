@@ -30,29 +30,16 @@ PYBIND11_MODULE(mm_mod, m) {
         auto pool = ctiprd::config::make_pool(njobs);
         auto integrator = ctiprd::cpu::integrator::EulerMaruyama{system, pool};
 
-        {
-            auto &generator = ctiprd::rnd::staticThreadLocalGenerator();
-            std::uniform_real_distribution<float> d1 {-System::boxSize[0] / 2, System::boxSize[0] / 2};
-            std::uniform_real_distribution<float> d2 {-System::boxSize[1] / 2, System::boxSize[1] / 2};
-            std::uniform_real_distribution<float> d3 {-System::boxSize[2] / 2, System::boxSize[2] / 2};
-            int nE = 909;
-            int nS = 9091;
-            for (int n = 0; n < nE; ++n) {
-                integrator.particles()->addParticle({{d1(generator), d2(generator), d3(generator)}}, "E");
-            }
-            for (int n = 0; n < nS; ++n) {
-                integrator.particles()->addParticle({{d1(generator), d2(generator), d3(generator)}}, "S");
-            }
-        }
+        integrator.particles()->initializeParticles(909, "E");
+        integrator.particles()->initializeParticles(9091, "S");
+
         std::vector<std::size_t> nE {};
         std::vector<std::size_t> nS {};
         std::vector<std::size_t> nES {};
         std::vector<std::size_t> nP {};
-        std::mutex m {};
         {
             py::gil_scoped_release release;
             for (std::size_t t = 0; t < nSteps; ++t) {
-
                 {
                     std::atomic<std::size_t> nEl {0};
                     std::atomic<std::size_t> nSl {0};

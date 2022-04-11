@@ -133,6 +133,20 @@ public:
     }
 
     template<typename T>
+    void initializeParticles(std::size_t n, T &&type) requires std::convertible_to<T, std::string_view> {
+        auto &generator = ctiprd::rnd::staticThreadLocalGenerator();
+        for(std::size_t i = 0; i < n; ++i) {
+            Position pos {};
+            for (std::size_t d = 0; d < DIM; ++d) {
+                std::uniform_real_distribution<float> dist {-System::boxSize[d] / 2, System::boxSize[d] / 2};
+                pos[d] = dist(generator);
+            }
+
+            addParticle(pos, type);
+        }
+    }
+
+    template<typename T>
     void addParticle(const Position &position, T &&type) requires std::convertible_to<T, std::string_view> {
         addParticle(position, systems::particleTypeId<System::types>(type));
     }
