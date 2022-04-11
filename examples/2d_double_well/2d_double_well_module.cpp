@@ -4,8 +4,11 @@
 
 #include <pybind11/numpy.h>
 
+#include <ctiprd/config.h>
+
 #include <ctiprd/systems/double_well.h>
 #include <ctiprd/progressbar.hpp>
+#include <ctiprd/cpu/integrators/EulerMaruyama.h>
 
 namespace py = pybind11;
 
@@ -20,7 +23,7 @@ PYBIND11_MODULE(dw_mod, m) {
 
         System system {};
         auto pool = ctiprd::config::make_pool(3);
-        auto integrator = ctiprd::integrator::EulerMaruyama{system, pool};
+        auto integrator = ctiprd::cpu::integrator::EulerMaruyama{system, pool};
         for(int n = 0; n < 10000; ++n) {
             integrator.particles()->addParticle({{0., 0.}}, "A");
         }
