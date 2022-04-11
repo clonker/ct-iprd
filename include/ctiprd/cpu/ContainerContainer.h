@@ -8,7 +8,7 @@
  */
 #pragma once
 
-namespace ctiprd {
+namespace ctiprd::cpu {
 
 template<typename... Containers>
 class ContainerContainer {

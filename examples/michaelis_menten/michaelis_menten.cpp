@@ -11,7 +11,7 @@
 #include <ctiprd/systems/michaelis_menten.h>
 
 #include <ctiprd/integrators/EulerMaruyama.h>
-#include <ctiprd/reactions/basic.h>
+#include <ctiprd/reactions/doi.h>
 #include <ctiprd/systems/util.h>
 #include <ctiprd/binding/system_bindings.h>
 

@@ -1,16 +1,17 @@
-#pragma once
+#pragma oncecpu
 
 #include <memory>
 
-#include <ctiprd/util/distribution_utils.h>
-#include <ctiprd/ParticleCollection.h>
-#include <ctiprd/NeighborList.h>
 #include <ctiprd/potentials/util.h>
-#include <ctiprd/potentials/ForceField.h>
-#include <ctiprd/reactions/UncontrolledApproximation.h>
+#include <ctiprd/util/distribution_utils.h>
+
+#include <ctiprd/cpu/ParticleCollection.h>
+#include <ctiprd/cpu/NeighborList.h>
+#include <ctiprd/cpu/ForceField.h>
+#include <ctiprd/cpu/UncontrolledApproximation.h>
 #include <ctiprd/util/pbc.h>
 
-namespace ctiprd::integrator {
+namespace ctiprd::cpu::integrator {
 
 namespace detail {
 template<typename dtype>
@@ -22,14 +23,14 @@ auto &normalDistribution() {
 }
 
 template<typename System, typename Pool = config::ThreadPool, typename Generator = std::mt19937,
-         typename ForceField = potentials::ForceField<System>, typename Reactions = reactions::UncontrolledApproximation<System, Generator>>
+         typename ForceField = potentials::ForceField<System>, typename Reactions = UncontrolledApproximation<System, Generator>>
 class EulerMaruyama {
 public:
 
     static constexpr std::size_t DIM = System::DIM;
     using dtype = typename System::dtype;
 
-    using Particles = ParticleCollection<System, ctiprd::particles::positions, ctiprd::particles::forces>;
+    using Particles = ParticleCollection<System, particles::positions, particles::forces>;
     static constexpr const char *name = "EulerMaruyama";
 
     explicit EulerMaruyama(const System &system, config::PoolPtr<Pool> pool) :

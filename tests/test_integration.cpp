@@ -1,16 +1,18 @@
 #include <catch2/catch.hpp>
 
-#include <ctiprd/NeighborList.h>
-#include "ctiprd/systems/double_well.h"
-#include "ctiprd/systems/lotka_volterra.h"
-#include "spdlog/spdlog.h"
+#include <spdlog/spdlog.h>
+
+#include <ctiprd/systems/double_well.h>
+#include <ctiprd/systems/lotka_volterra.h>
+
+#include <ctiprd/cpu/integrators/EulerMaruyama.h>
 
 TEMPLATE_TEST_CASE("Test Integration", "[integration]", ctiprd::systems::DoubleWell<float>, ctiprd::systems::LotkaVolterra<float>) {
     std::size_t nSteps = 100;
 
     TestType system {};
     auto pool = ctiprd::config::make_pool(3);
-    auto integrator = ctiprd::integrator::EulerMaruyama{system, pool};
+    auto integrator = ctiprd::cpu::integrator::EulerMaruyama{system, pool};
     for(int n = 0; n < 500; ++n) {
         integrator.particles()->addParticle({{0., 0.}}, system.types[0].name);
     }

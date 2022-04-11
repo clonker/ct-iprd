@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <cmath>
 
+#include <ctiprd/util/pbc.h>
 #include <ctiprd/potentials/util.h>
 
 namespace ctiprd::potentials::pair {
@@ -21,7 +22,7 @@ struct HarmonicRepulsion {
     template<typename State, typename ParticleType>
     dtype energy(const State &x1, const ParticleType &t1, const State &x2, const ParticleType &t2) const {
         if(allTypes || potentialApplicable<HarmonicRepulsion>(t1, t2)) {
-            auto dSquared = util::pbc::dSquared<System>(x1, x2);
+            auto dSquared = ctiprd::util::pbc::dSquared<System>(x1, x2);
             if (dSquared < cutoff * cutoff) {
                 auto d = std::sqrt(dSquared);
                 d -= cutoff;

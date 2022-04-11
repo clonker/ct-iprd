@@ -10,7 +10,13 @@
 
 #include <tuple>
 
-namespace ctiprd::potentials {
+#include <ctiprd/potentials/util.h>
+#include <ctiprd/potentials/external.h>
+#include <ctiprd/potentials/interaction.h>
+
+#include <ctiprd/cpu/NeighborList.h>
+
+namespace ctiprd::cpu::potentials {
 
 template<typename System>
 struct ForceField {
@@ -36,7 +42,7 @@ struct ForceField {
     void forces(std::shared_ptr<Particles> particles, std::shared_ptr<Pool> pool, bool wait = true) {
         if constexpr(nPairPotentials > 0) {
             if (!neighborList_) {
-                auto cutoff = potentials::cutoff<dtype>(pairPotentials_);
+                auto cutoff = ctiprd::potentials::cutoff<dtype>(pairPotentials_);
                 neighborList_ = std::make_unique<NeighborList>(System::boxSize, cutoff);
             }
             neighborList_->update(particles, pool);

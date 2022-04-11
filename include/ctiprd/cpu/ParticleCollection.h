@@ -13,11 +13,11 @@
 
 #include <ctiprd/vec.h>
 #include <ctiprd/config.h>
-#include <ctiprd/ContainerContainer.h>
 #include "ctiprd/systems/util.h"
 #include "ctiprd/util/pbc.h"
+#include <ctiprd/cpu/ContainerContainer.h>
 
-namespace ctiprd {
+namespace ctiprd::cpu {
 
 namespace detail {
 

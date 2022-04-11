@@ -10,7 +10,7 @@
 
 #include <tuple>
 
-#include <ctiprd/reactions/basic.h>
+#include <ctiprd/reactions/doi.h>
 #include <ctiprd/systems/util.h>
 #include <ctiprd/ParticleTypes.h>
 

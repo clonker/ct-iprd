@@ -13,7 +13,7 @@
 #include <ctiprd/util/Index.h>
 #include <ctiprd/thread/utils.h>
 
-namespace ctiprd::nl {
+namespace ctiprd::cpu::nl {
 
 template<int DIM, bool periodic, typename dtype>
 class NeighborList {

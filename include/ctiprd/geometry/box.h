@@ -9,6 +9,7 @@
 #include <array>
 #include <cmath>
 #include <algorithm>
+
 #include <fmt/format.h>
 
 namespace ctiprd::geometry {

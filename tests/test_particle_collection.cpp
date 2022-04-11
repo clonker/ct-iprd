@@ -1,12 +1,14 @@
-#include <catch2/catch.hpp>
-#include <ctiprd/systems/double_well.h>
-#include <ctiprd/ParticleCollection.h>
-#include "ctiprd/systems/michaelis_menten.h"
 #include <set>
+
+#include <catch2/catch.hpp>
+
+#include <ctiprd/systems/double_well.h>
+#include <ctiprd/systems/michaelis_menten.h>
+#include <ctiprd/cpu/integrators/EulerMaruyama.h>
 
 TEST_CASE("Particle collection sanity", "[particles]") {
     using System = ctiprd::systems::DoubleWell<float>;
-    ctiprd::ParticleCollection<System, ctiprd::particles::positions, ctiprd::particles::forces> collection {};
+    ctiprd::cpu::ParticleCollection<System, ctiprd::cpu::particles::positions, ctiprd::cpu::particles::forces> collection {};
     REQUIRE(collection.dim == 2);
     REQUIRE(collection.containsForces() == true);
     REQUIRE(collection.containsPositions() == true);
@@ -16,7 +18,7 @@ TEST_CASE("Particle collection sanity", "[particles]") {
 SCENARIO("Particle collection can have different flags") {
     using System = ctiprd::systems::DoubleWell<float>;
     auto pool = ctiprd::config::make_pool(5);
-    using Collection = ctiprd::ParticleCollection<System, ctiprd::particles::positions, ctiprd::particles::forces>;
+    using Collection = ctiprd::cpu::ParticleCollection<System, ctiprd::cpu::particles::positions, ctiprd::cpu::particles::forces>;
     GIVEN("A particle collection with default flags") {
         Collection collection {};
         THEN("the flags are set up correctly") {
@@ -62,7 +64,7 @@ SCENARIO("Particle collection can have different flags") {
     }
 
     GIVEN("A particle collection with just positions") {
-        ctiprd::ParticleCollection<System, ctiprd::particles::positions> collection {};
+        ctiprd::cpu::ParticleCollection<System, ctiprd::cpu::particles::positions> collection {};
         THEN("the flags are set up correctly") {
             REQUIRE(collection.containsForces() == false);
             REQUIRE(collection.containsPositions() == true);
@@ -71,7 +73,7 @@ SCENARIO("Particle collection can have different flags") {
     }
 
     GIVEN("A particle collection with positions and velocities") {
-        ctiprd::ParticleCollection<System, ctiprd::particles::positions, ctiprd::particles::velocities> collection {};
+        ctiprd::cpu::ParticleCollection<System, ctiprd::cpu::particles::positions, ctiprd::cpu::particles::velocities> collection {};
         THEN("the flags are set up correctly") {
             REQUIRE(collection.containsForces() == false);
             REQUIRE(collection.containsPositions() == true);
@@ -84,7 +86,7 @@ TEST_CASE("Test against michaelis menten", "[particles][michaelis-menten]") {
     using System = ctiprd::systems::MichaelisMenten<float>;
     System system {};
     auto pool = ctiprd::config::make_pool(8);
-    auto integrator = ctiprd::integrator::EulerMaruyama{system, pool};
+    auto integrator = ctiprd::cpu::integrator::EulerMaruyama{system, pool};
     int nEinit = 90;
     int nSinit = 90;
     {
