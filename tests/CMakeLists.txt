@@ -8,7 +8,8 @@ set(TEST_SRC
         test_reactions.cpp
         test_integration.cpp
         test_cuda.cu
-        test_michaelis_menten.cpp)
+        test_michaelis_menten.cpp
+        test_forward_backward_map.cpp)
 add_executable(tests catch_main.cpp ${TEST_SRC})
 set_target_properties(tests PROPERTIES CXX_VISIBILITY_PRESET hidden)
 

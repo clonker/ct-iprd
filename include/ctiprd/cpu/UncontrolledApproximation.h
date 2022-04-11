@@ -188,7 +188,6 @@ struct UncontrolledApproximation {
     using ReactionsO1 = typename System::ReactionsO1;
     using ReactionsO2 = typename System::ReactionsO2;
 
-
     static constexpr int nReactionsO1 = std::tuple_size_v<ReactionsO1>;
     static constexpr int nReactionsO2 = std::tuple_size_v<ReactionsO2>;
 

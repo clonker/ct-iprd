@@ -26,7 +26,7 @@ TEST_CASE("Michaelis Menten", "[michaelis-menten][integration]") {
     {
         for (std::size_t t = 0; t < nSteps; ++t) {
 
-            {
+            /*{
                 std::atomic<std::size_t> nEl {0};
                 std::atomic<std::size_t> nSl {0};
                 std::atomic<std::size_t> nESl {0};
@@ -49,7 +49,7 @@ TEST_CASE("Michaelis Menten", "[michaelis-menten][integration]") {
                 nS.emplace_back(nSl.load());
                 nES.emplace_back(nESl.load());
                 nP.emplace_back(nPl.load());
-            }
+            }*/
 
             integrator.step(8e-4);
         }

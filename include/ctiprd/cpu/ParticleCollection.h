@@ -24,12 +24,12 @@ namespace detail {
 template<typename Info, typename F>
 struct Loop {
 
-    explicit Loop(F &&f) : operation(std::forward<F>(f)) {}
+    explicit Loop(const F &f) : operation(std::cref(f)) {}
 
     template<typename... Args>
     void operator()(std::size_t startId, std::size_t n, Args&&... args) const {
         static_assert(sizeof...(args) == 1 + static_cast<int>(Info::positions) + static_cast<int>(Info::velocities) + static_cast<int>(Info::forces));
-        std::tuple iterators {args...};
+        std::tuple<Args...> iterators {std::forward<Args>(args)...};
         for(std::size_t id = startId; id < startId + n; ++id) {
             if(*std::get<0>(iterators)) {
                 if constexpr(Info::forces && Info::velocities) {
@@ -47,13 +47,13 @@ struct Loop {
                 }
             }
 
-            std::apply([](auto&... it) {
+            /*std::apply([](auto&... it) {
                 (++it, ...);
-            }, iterators);
+            }, iterators);*/
         }
     }
 
-    F operation;
+    std::reference_wrapper<const F> operation;
 
 };
 }
@@ -218,12 +218,39 @@ public:
     template<typename F, typename Pool,
             typename R=std::invoke_result_t<std::decay_t<F>, std::size_t, Position&, ParticleType, Force&>,
             typename = std::enable_if_t<std::is_void_v<R>>>
-    std::vector<std::future<void>> forEachParticle(F &&op, config::PoolPtr<Pool> pool) {
+    std::vector<std::future<void>> forEachParticle(const F &op, config::PoolPtr<Pool> pool) {
         std::vector<std::future<void>> futures;
         auto granularity = config::threadGranularity(pool);
         futures.reserve(granularity);
 
-        detail::Loop<Info, F> loop {std::forward<F>(op)};
+        detail::Loop<Info, F> loop {op};
+        /*auto loop = [operation = std::forward<F>(op)](
+                auto startIndex,
+                const auto &beginPositions, const auto &endPositions,
+                auto itTypes, auto itForces, auto itVelocities
+        ) {
+            for (auto itPos = beginPositions; itPos != endPositions; ++itPos, ++startIndex, ++itTypes) {
+                if (*itPos) {
+                    if constexpr(containsForces() && containsVelocities()) {
+                        operation(startIndex, **itPos, *itTypes, *itForces, *itVelocities);
+                    } else if constexpr(containsForces() && !containsVelocities()) {
+                        operation(startIndex, **itPos, *itTypes, *itForces);
+                    } else if constexpr(!containsForces() && containsVelocities()) {
+                        operation(startIndex, **itPos, *itTypes, +itVelocities);
+                    } else {
+                        operation(startIndex, **itPos, *itTypes);
+                    }
+                }
+
+                if constexpr(containsForces()) {
+                    ++itForces;
+                }
+                if constexpr(containsVelocities()) {
+                    ++itVelocities;
+                }
+            }
+        };*/
+
         auto n = size();
         auto grainSize = n / granularity;
         auto itPos = positions_.begin();
@@ -235,6 +262,7 @@ public:
         for (std::size_t i = 0; i < granularity - 1; ++i) {
             if (itPos != positions_.end()) {
                 futures.push_back(pool->push(loop, beginIx, grainSize, itPos, itTypes, itForces));
+                //futures.push_back(pool->push(loop, beginIx, itPos, itPos + grainSize, itTypes, itForces, itVelocities));
             }
             beginIx += grainSize;
             itPos += grainSize;
@@ -248,6 +276,7 @@ public:
         }
         if (itPos != positions_.end()) {
             futures.push_back(pool->push(loop, beginIx, std::distance(itPos, end(positions_)), itPos, itTypes, itForces));
+            //futures.push_back(pool->push(loop, beginIx, itPos, end(positions_), itTypes, itForces, itVelocities));
         }
 
         return std::move(futures);

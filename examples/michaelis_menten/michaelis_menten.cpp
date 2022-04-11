@@ -17,8 +17,6 @@
 
 namespace py = pybind11;
 
-
-
 using System = ctiprd::systems::MichaelisMenten<float>;
 
 PYBIND11_MODULE(mm_mod, m) {
