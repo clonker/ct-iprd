@@ -10,10 +10,10 @@
 
 #include <ctiprd/systems/michaelis_menten.h>
 
-#include <ctiprd/integrators/EulerMaruyama.h>
 #include <ctiprd/reactions/doi.h>
 #include <ctiprd/systems/util.h>
 #include <ctiprd/binding/system_bindings.h>
+#include <ctiprd/cpu/integrators/EulerMaruyama.h>
 
 namespace py = pybind11;
 
@@ -28,7 +28,7 @@ PYBIND11_MODULE(mm_mod, m) {
     m.def("simulate", [] (std::size_t nSteps, float dt, int njobs, py::handle progressCallback) {
         System system {};
         auto pool = ctiprd::config::make_pool(njobs);
-        auto integrator = ctiprd::integrator::EulerMaruyama{system, pool};
+        auto integrator = ctiprd::cpu::integrator::EulerMaruyama{system, pool};
 
         {
             auto &generator = ctiprd::rnd::staticThreadLocalGenerator();
@@ -60,7 +60,6 @@ PYBIND11_MODULE(mm_mod, m) {
                     std::atomic<std::size_t> nPl {0};
                     integrator.particles()->forEachParticle([&nEl, &nSl, &nESl, &nPl](const auto &id, const auto &, const auto &type,
                                                                                   const auto &) {
-
                         if(type == System::eId) {
                             ++nEl;
                         } else if(type == System::sId) {

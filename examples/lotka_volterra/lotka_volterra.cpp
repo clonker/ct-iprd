@@ -6,9 +6,13 @@
 
 #include <pybind11/stl.h>
 
+#include <ctiprd/config.h>
+
 #include <ctiprd/systems/lotka_volterra.h>
 #include <ctiprd/binding/system_bindings.h>
 #include <ctiprd/progressbar.hpp>
+
+#include <ctiprd/cpu/integrators/EulerMaruyama.h>
 
 namespace py = pybind11;
 
@@ -23,7 +27,7 @@ PYBIND11_MODULE(lv_mod, m) {
     m.def("simulate", [] (std::size_t nSteps, float dt, int njobs, int nPrey, int nPredator, py::handle progressCallback) {
         System system {};
         auto pool = ctiprd::config::make_pool(njobs);
-        auto integrator = ctiprd::integrator::EulerMaruyama{system, pool};
+        auto integrator = ctiprd::cpu::integrator::EulerMaruyama{system, pool};
 
         {
             auto &generator = ctiprd::rnd::staticThreadLocalGenerator();
