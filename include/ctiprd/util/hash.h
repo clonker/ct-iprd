@@ -33,8 +33,7 @@ void combine(std::size_t &seed, const T &v) {
 }
 
 template<typename T, typename Tup = std::remove_reference_t<T>, auto N = std::tuple_size_v<Tup>>
-class ForwardBackwardTupleHasher {
-public:
+struct ForwardBackwardTupleHasher {
     /**
      * Evaluates the hash of tuples independent of their reversedness.
      * @param tuple the tuple to compare
@@ -52,6 +51,14 @@ public:
             }
         }(std::make_index_sequence<N>{});
         return seed;
+    }
+};
+
+template<typename Tuple>
+struct TupleCompare {
+    bool operator()(const Tuple &tup1, const Tuple &tup2) {
+        return (std::get<0>(tup1) <= std::get<1>(tup1) ? tup1 : detail::ReverseTuple(tup1))
+                < std::get<0>(tup2) <= std::get<1>(tup2) ? tup2 : detail::ReverseTuple(tup2);
     }
 };
 

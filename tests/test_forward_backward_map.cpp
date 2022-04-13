@@ -17,5 +17,6 @@ TEST_CASE("Forward Backward Map", "[tuples][hash]") {
 
     REQUIRE(map.find(std::make_tuple(3, 4)) != end(map));
     REQUIRE(map.find(std::make_tuple(4, 3)) != end(map));
+    REQUIRE(map.find(std::make_tuple(3, 4))->second == "test");
     REQUIRE(map.find(std::make_tuple(4, 3))->second == "test");
 }

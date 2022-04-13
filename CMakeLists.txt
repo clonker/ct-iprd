@@ -46,6 +46,8 @@ add_library(ct-iprd::ct-iprd ALIAS ${PROJECT_NAME})
 if(CT_IPRD_BUILD_TESTS)
     find_package(Catch2 REQUIRED)
     add_subdirectory(tests)
+
+    add_subdirectory(benchmarks)
 endif()
 
 add_subdirectory(src)
