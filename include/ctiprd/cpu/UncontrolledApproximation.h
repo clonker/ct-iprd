@@ -13,6 +13,7 @@
 #include <ctiprd/reactions/doi.h>
 #include <ctiprd/cpu/NeighborList.h>
 #include <ctiprd/cpu/ParticleCollection.h>
+#include <ctiprd/cpu/reactions.h>
 
 namespace ctiprd::cpu {
 
@@ -41,7 +42,6 @@ template<typename dtype, typename State, typename ParticleType>
 
 template<std::size_t DIM, typename dtype, typename State, typename ParticleType>
 struct BaseReaction {
-
 };
 
 template<std::size_t DIM, typename dtype, typename State, typename ParticleType>
@@ -58,8 +58,8 @@ template<typename Reaction, std::size_t DIM, typename dtype, typename State, typ
 struct ReactionImpl;
 
 template<std::size_t DIM, typename dtype, typename State, typename ParticleType>
-struct ReactionImpl<reactions::doi::Decay<dtype>, DIM, dtype, State, ParticleType> : BaseReactionO1<DIM, dtype, State, ParticleType> {
-    explicit ReactionImpl(const reactions::doi::Decay<dtype> *reaction) : reaction(reaction) {}
+struct ReactionImpl<ctiprd::reactions::doi::Decay<dtype>, DIM, dtype, State, ParticleType> : BaseReactionO1<DIM, dtype, State, ParticleType> {
+    explicit ReactionImpl(const ctiprd::reactions::doi::Decay<dtype> *reaction) : reaction(reaction) {}
 
     [[nodiscard]] bool shouldPerform(dtype tau, const State &state, const ParticleType &t) const {
         return detail::shouldPerformO1(tau, state, t, reaction);
@@ -70,12 +70,12 @@ struct ReactionImpl<reactions::doi::Decay<dtype>, DIM, dtype, State, ParticleTyp
         updater.remove(id1, collection);
     }
 
-    const reactions::doi::Decay<dtype> *reaction;
+    const ctiprd::reactions::doi::Decay<dtype> *reaction;
 };
 
 template<std::size_t DIM, typename dtype, typename State, typename ParticleType>
-struct ReactionImpl<reactions::doi::Conversion<dtype>, DIM, dtype, State, ParticleType> : BaseReactionO1<DIM, dtype, State, ParticleType> {
-    explicit ReactionImpl(const reactions::doi::Conversion<dtype> *reaction) : reaction(reaction) {}
+struct ReactionImpl<ctiprd::reactions::doi::Conversion<dtype>, DIM, dtype, State, ParticleType> : BaseReactionO1<DIM, dtype, State, ParticleType> {
+    explicit ReactionImpl(const ctiprd::reactions::doi::Conversion<dtype> *reaction) : reaction(reaction) {}
 
     [[nodiscard]] bool shouldPerform(dtype tau, const State &state, const ParticleType &t) const {
         return detail::shouldPerformO1(tau, state, t, reaction);
@@ -86,12 +86,12 @@ struct ReactionImpl<reactions::doi::Conversion<dtype>, DIM, dtype, State, Partic
         updater.directUpdate(id1, reaction->productType, {}, collection);
     }
 
-    const reactions::doi::Conversion<dtype> *reaction;
+    const ctiprd::reactions::doi::Conversion<dtype> *reaction;
 };
 
 template<std::size_t DIM, typename dtype, typename State, typename ParticleType>
-struct ReactionImpl<reactions::doi::Fission<dtype>, DIM, dtype, State, ParticleType> : BaseReactionO1<DIM, dtype, State, ParticleType> {
-    explicit ReactionImpl(const reactions::doi::Fission<dtype> *reaction) : reaction(reaction) {}
+struct ReactionImpl<ctiprd::reactions::doi::Fission<dtype>, DIM, dtype, State, ParticleType> : BaseReactionO1<DIM, dtype, State, ParticleType> {
+    explicit ReactionImpl(const ctiprd::reactions::doi::Fission<dtype> *reaction) : reaction(reaction) {}
 
     [[nodiscard]] bool shouldPerform(dtype tau, const State &state, const ParticleType &t) const {
         return detail::shouldPerformO1(tau, state, t, reaction);
@@ -111,7 +111,7 @@ struct ReactionImpl<reactions::doi::Fission<dtype>, DIM, dtype, State, ParticleT
         updater.directUpdate(id1, reaction->productType1, c + 0.5 * distance * n, collection);
     }
 
-    const reactions::doi::Fission<dtype> *reaction;
+    const ctiprd::reactions::doi::Fission<dtype> *reaction;
 
     template<typename Generator>
     static auto normal(Generator &generator) {
@@ -126,8 +126,8 @@ struct ReactionImpl<reactions::doi::Fission<dtype>, DIM, dtype, State, ParticleT
 };
 
 template<std::size_t DIM, typename dtype, typename State, typename ParticleType>
-struct ReactionImpl<reactions::doi::Catalysis<dtype>, DIM, dtype, State, ParticleType> : BaseReactionO2<DIM, dtype, State, ParticleType> {
-    explicit ReactionImpl(const reactions::doi::Catalysis<dtype> *reaction) : reaction(reaction) {}
+struct ReactionImpl<ctiprd::reactions::doi::Catalysis<dtype>, DIM, dtype, State, ParticleType> : BaseReactionO2<DIM, dtype, State, ParticleType> {
+    explicit ReactionImpl(const ctiprd::reactions::doi::Catalysis<dtype> *reaction) : reaction(reaction) {}
 
     [[nodiscard]] bool shouldPerform(dtype tau, const State &state, const ParticleType &t,
                                      const State &state2, const ParticleType &t2) const {
@@ -145,12 +145,12 @@ struct ReactionImpl<reactions::doi::Catalysis<dtype>, DIM, dtype, State, Particl
         }
     }
 
-    const reactions::doi::Catalysis<dtype> *reaction;
+    const ctiprd::reactions::doi::Catalysis<dtype> *reaction;
 };
 
 template<std::size_t DIM, typename dtype, typename State, typename ParticleType>
-struct ReactionImpl<reactions::doi::Fusion<dtype>, DIM, dtype, State, ParticleType> : BaseReactionO2<DIM, dtype, State, ParticleType>  {
-    explicit ReactionImpl(const reactions::doi::Fusion<dtype> *reaction) : reaction(reaction) {}
+struct ReactionImpl<ctiprd::reactions::doi::Fusion<dtype>, DIM, dtype, State, ParticleType> : BaseReactionO2<DIM, dtype, State, ParticleType>  {
+    explicit ReactionImpl(const ctiprd::reactions::doi::Fusion<dtype> *reaction) : reaction(reaction) {}
 
     [[nodiscard]] bool shouldPerform(dtype tau, const State &state, const ParticleType &t,
                                      const State &state2, const ParticleType &t2) const {
@@ -174,7 +174,7 @@ struct ReactionImpl<reactions::doi::Fusion<dtype>, DIM, dtype, State, ParticleTy
             }
         }
     }
-    const reactions::doi::Fusion<dtype> *reaction;
+    const ctiprd::reactions::doi::Fusion<dtype> *reaction;
 };
 
 }
@@ -189,7 +189,7 @@ struct ReactionEvent {
     }
 };
 
-template<typename System, typename Generator=config::DefaultGenerator>
+template<typename ParticleCollection, typename System, typename Generator=config::DefaultGenerator>
 struct UncontrolledApproximation {
     static constexpr std::size_t DIM = System::DIM;
     using dtype = typename System::dtype;
@@ -198,20 +198,28 @@ struct UncontrolledApproximation {
     using ReactionsO1 = typename System::ReactionsO1;
     using ReactionsO2 = typename System::ReactionsO2;
 
+    using Updater = ParticleCollectionUpdater<System, ParticleCollection>;
+
     static constexpr int nReactionsO1 = std::tuple_size_v<ReactionsO1>;
     static constexpr int nReactionsO2 = std::tuple_size_v<ReactionsO2>;
 
-    template<typename Particles, typename Pool>
-    void reactions(const System &system, dtype tau, std::shared_ptr<Particles> particles,
-                   std::shared_ptr<Pool> pool) {
-
-        using Updater = ParticleCollectionUpdater<System, Particles>;
-
+    explicit UncontrolledApproximation(const System &system) {
         if constexpr(nReactionsO2 > 0) {
             if (!neighborList_) {
-                auto cutoff = reactions::reactionRadius<dtype>(system.reactionsO2);
+                auto cutoff = ctiprd::reactions::reactionRadius<dtype>(system.reactionsO2);
                 neighborList_ = std::make_unique<NeighborList>(System::boxSize, cutoff);
             }
+        }
+
+        std::tie(reactionsO1, backingO1) = reactions::impl::generateMapO1<Updater>(system);
+        std::tie(reactionsO2, backingO2) = reactions::impl::generateMapO2<Updater>(system);
+    }
+
+    template<typename Pool>
+    void reactions(const System &system, dtype tau, std::shared_ptr<ParticleCollection> particles,
+                   std::shared_ptr<Pool> pool) {
+
+        if constexpr(nReactionsO2 > 0) {
             neighborList_->update(particles, pool);
         }
 
@@ -219,8 +227,8 @@ struct UncontrolledApproximation {
         std::vector<ReactionEvent<dtype, Updater>> events;
         {
             auto worker = [&system, tau, nl = neighborList_.get(), data = particles.get(), &events, &mutex](
-                    auto id, typename Particles::Position &pos, const typename Particles::ParticleType &type,
-                    typename Particles::Force &force
+                    auto id, typename ParticleCollection::Position &pos, const typename ParticleCollection::ParticleType &type,
+                    typename ParticleCollection::Force &force
             ) {
                 std::vector<ReactionEvent<dtype, Updater>> localEvents;
 
@@ -284,6 +292,10 @@ struct UncontrolledApproximation {
     }
 
     std::unique_ptr<NeighborList> neighborList_;
+    reactions::impl::ReactionsO1Map<Updater> reactionsO1;
+    reactions::impl::ReactionsO1Backing<Updater> backingO1;
+    reactions::impl::ReactionsO2Map<Updater> reactionsO2;
+    reactions::impl::ReactionsO2Backing<Updater> backingO2;
 };
 
 }

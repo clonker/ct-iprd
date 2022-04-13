@@ -14,7 +14,7 @@
 #include <ctiprd/reactions/doi.h>
 #include <spdlog/spdlog.h>
 
-namespace ctiprd::cpu::reactions::doi {
+namespace ctiprd::cpu::reactions::impl {
 
 template<typename Updater>
 struct ReactionO1 {
@@ -152,14 +152,17 @@ using EqO2 = ctiprd::util::hash::ForwardBackwardTupleEquality<KeyO2>;
 
 template<typename Updater>
 using ReactionsO1Map = std::unordered_map<std::size_t, std::vector<const ReactionO1<Updater>*>>;
+template<typename Updater>
+using ReactionsO1Backing = std::list<std::unique_ptr<ReactionO1<Updater>>>;
 
 template<typename Updater>
 using ReactionsO2Map = std::unordered_map<detail::KeyO2, std::vector<const ReactionO2<Updater>*>, detail::HasherO2, detail::EqO2>;
-
+template<typename Updater>
+using ReactionsO2Backing = std::list<std::unique_ptr<ReactionO2<Updater>>>;
 
 template<typename Updater, typename System>
-std::tuple<ReactionsO1Map<Updater>, std::list<std::unique_ptr<ReactionO1<Updater>>>> generateMapO1(const System &system) {
-    std::list<std::unique_ptr<ReactionO1<Updater>>> backingData {};
+std::tuple<ReactionsO1Map<Updater>, ReactionsO1Backing<Updater>> generateMapO1(const System &system) {
+    ReactionsO1Backing<Updater> backingData {};
     ReactionsO1Map<Updater> map;
 
     [&]<auto... I>(std::index_sequence<I...>) {
@@ -174,8 +177,8 @@ std::tuple<ReactionsO1Map<Updater>, std::list<std::unique_ptr<ReactionO1<Updater
 }
 
 template<typename Updater, typename System>
-std::tuple<ReactionsO2Map<Updater>, std::list<std::unique_ptr<ReactionO2<Updater>>>> generateMapO2(const System &system) {
-    std::list<std::unique_ptr<ReactionO2<Updater>>> backingData {};
+std::tuple<ReactionsO2Map<Updater>, ReactionsO2Backing<Updater>> generateMapO2(const System &system) {
+    ReactionsO2Backing<Updater> backingData {};
     ReactionsO2Map<Updater> map;
 
     [&]<auto... I>(std::index_sequence<I...>) {

@@ -8,5 +8,6 @@
 
 TEST_CASE("UncontrolledApproximation sanity", "[reactions]") {
     using System = ctiprd::systems::DoubleWell<float>;
-    ctiprd::cpu::UncontrolledApproximation<System> ua;
+    using ParticleCollection = ctiprd::cpu::ParticleCollection<System, ctiprd::cpu::particles::positions>;
+    ctiprd::cpu::UncontrolledApproximation<ParticleCollection, System> ua {System{}};
 }

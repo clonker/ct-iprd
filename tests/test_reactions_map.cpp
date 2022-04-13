@@ -88,7 +88,7 @@ TEST_CASE("Test reactions map", "[reactions]") {
     using Updater = ctiprd::cpu::ParticleCollectionUpdater<System, ParticleCollection>;
     System system {};
     {
-        auto[map, backing] = ctiprd::cpu::reactions::doi::generateMapO1<Updater>(system);
+        auto[map, backing] = ctiprd::cpu::reactions::impl::generateMapO1<Updater>(system);
         REQUIRE(map[System::aId].size() == 2);
         REQUIRE(map[System::aId][0]->shouldPerform(1e50, {}, System::aId));
         REQUIRE(!map[System::aId][0]->shouldPerform(1e50, {}, System::bId));
@@ -102,7 +102,7 @@ TEST_CASE("Test reactions map", "[reactions]") {
         REQUIRE(!map[System::bId][1]->shouldPerform(1e50, {}, System::aId));
     }
     {
-        auto [map, backing] = ctiprd::cpu::reactions::doi::generateMapO2<Updater>(system);
+        auto [map, backing] = ctiprd::cpu::reactions::impl::generateMapO2<Updater>(system);
         REQUIRE(map[std::make_tuple(System::aId, System::aId)].size() == 1);
         REQUIRE(!map[std::make_tuple(System::aId, System::aId)][0]->shouldPerform(1e50, {}, System::aId, {}, System::bId));
         REQUIRE(!map[std::make_tuple(System::aId, System::aId)][0]->shouldPerform(1e50, {}, System::bId, {}, System::aId));
