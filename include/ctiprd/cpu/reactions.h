@@ -20,19 +20,13 @@ template<typename Updater>
 struct ReactionO1 {
     using dtype = typename Updater::dtype;
     using State = typename Updater::Position;
-
-    ReactionO1(std::size_t eductType) : eductType(eductType) {}
-
     [[nodiscard]] virtual bool shouldPerform(dtype tau, const State &s1, const std::size_t &t1) const { return false; };
-
-    std::size_t eductType {};
 };
 
-template<typename ParticleCollection>
+template<typename Updater>
 struct ReactionO2 {
-    using dtype = typename ParticleCollection::dtype;
-    using State = typename ParticleCollection::Position;
-
+    using dtype = typename Updater::dtype;
+    using State = typename Updater::Position;
     [[nodiscard]] virtual bool shouldPerform(dtype tau, const State &s1, const std::size_t &t1,
                                              const State &s2, const std::size_t &t2) const { return false; };
 };
@@ -65,8 +59,7 @@ struct CPUReactionO1<Updater, ctiprd::reactions::doi::Decay<typename Updater::dt
     using typename ReactionO1<Updater>::dtype;
     using typename ReactionO1<Updater>::State;
 
-    explicit CPUReactionO1(const ReactionType &reaction)
-        : ReactionO1<Updater>(reaction.eductType), baseReaction(reaction) {}
+    explicit CPUReactionO1(const ReactionType &reaction) : baseReaction(reaction) {}
 
     bool shouldPerform(dtype tau, const State &s1, const std::size_t &t1) const override {
         return detail::shouldPerformO1(tau, s1, t1, baseReaction);
@@ -81,8 +74,7 @@ struct CPUReactionO1<Updater, ctiprd::reactions::doi::Conversion<typename Update
     using typename ReactionO1<Updater>::dtype;
     using typename ReactionO1<Updater>::State;
 
-    explicit CPUReactionO1(const ReactionType &reaction)
-            : ReactionO1<Updater>(reaction.eductType), baseReaction(reaction) {}
+    explicit CPUReactionO1(const ReactionType &reaction) : baseReaction(reaction) {}
 
     bool shouldPerform(dtype tau, const State &s1, const std::size_t &t1) const override {
         return detail::shouldPerformO1(tau, s1, t1, baseReaction);
@@ -97,12 +89,56 @@ struct CPUReactionO1<Updater, ctiprd::reactions::doi::Fission<typename Updater::
     using typename ReactionO1<Updater>::dtype;
     using typename ReactionO1<Updater>::State;
 
-    explicit CPUReactionO1(const ReactionType &reaction)
-            : ReactionO1<Updater>(reaction.eductType), baseReaction(reaction) {}
+    explicit CPUReactionO1(const ReactionType &reaction) : baseReaction(reaction) {}
 
     bool shouldPerform(dtype tau, const State &s1, const std::size_t &t1) const override {
         return detail::shouldPerformO1(tau, s1, t1, baseReaction);
     }
+
+    ReactionType baseReaction;
+};
+
+template<typename Updater, typename Reaction>
+struct CPUReactionO2 : ReactionO2<Updater> {};
+
+template<typename Updater>
+struct CPUReactionO2<Updater, ctiprd::reactions::doi::Fusion<typename Updater::dtype>> : ReactionO2<Updater> {
+    using ReactionType = ctiprd::reactions::doi::Fusion<typename Updater::dtype>;
+    using typename ReactionO2<Updater>::dtype;
+    using typename ReactionO2<Updater>::State;
+
+    explicit CPUReactionO2(const ReactionType &reaction) : baseReaction(reaction) {}
+
+    bool shouldPerform(dtype tau, const State &s1, const std::size_t &t1,
+                       const State &s2, const std::size_t &t2) const override {
+        return detail::shouldPerformO2(tau, s1, t1, s2, t2, baseReaction.eductType1, baseReaction.eductType2,
+                                       baseReaction.rate, baseReaction.reactionRadius);
+    }
+
+    [[nodiscard]] auto key() const {
+        return std::make_tuple(baseReaction.eductType1, baseReaction.eductType2);
+    };
+
+    ReactionType baseReaction;
+};
+
+template<typename Updater>
+struct CPUReactionO2<Updater, ctiprd::reactions::doi::Catalysis<typename Updater::dtype>> : ReactionO2<Updater> {
+    using ReactionType = ctiprd::reactions::doi::Catalysis<typename Updater::dtype>;
+    using typename ReactionO2<Updater>::dtype;
+    using typename ReactionO2<Updater>::State;
+
+    explicit CPUReactionO2(const ReactionType &reaction) : baseReaction(reaction) {}
+
+    bool shouldPerform(dtype tau, const State &s1, const std::size_t &t1,
+                       const State &s2, const std::size_t &t2) const override {
+        return detail::shouldPerformO2(tau, s1, t1, s2, t2, baseReaction.catalyst, baseReaction.eductType,
+                                       baseReaction.rate, baseReaction.reactionRadius);
+    }
+
+    [[nodiscard]] auto key() const {
+        return std::make_tuple(baseReaction.catalyst, baseReaction.eductType);
+    };
 
     ReactionType baseReaction;
 };
@@ -127,14 +163,30 @@ std::tuple<ReactionsO1Map<Updater>, std::list<std::unique_ptr<ReactionO1<Updater
     ReactionsO1Map<Updater> map;
 
     [&]<auto... I>(std::index_sequence<I...>) {
-        constexpr std::array is{I...};
         ([&](const auto &reaction) {
-            using ReactionType = std::tuple_element_t<is[I], typename System::ReactionsO1>;
+            using ReactionType = std::tuple_element_t<I, typename System::ReactionsO1>;
             backingData.push_back(std::make_unique<detail::CPUReactionO1<Updater, ReactionType>>(reaction));
             const auto &ref = backingData.back();
-            map[ref->eductType].push_back(ref.get());
-        }(std::get<is[I]>(system.reactionsO1)), ...);
+            map[reaction.eductType].push_back(ref.get());
+        }(std::get<I>(system.reactionsO1)), ...);
     }(std::make_index_sequence<std::tuple_size_v<typename System::ReactionsO1>>{});
+    return std::make_tuple(map, std::move(backingData));
+}
+
+template<typename Updater, typename System>
+std::tuple<ReactionsO2Map<Updater>, std::list<std::unique_ptr<ReactionO2<Updater>>>> generateMapO2(const System &system) {
+    std::list<std::unique_ptr<ReactionO2<Updater>>> backingData {};
+    ReactionsO2Map<Updater> map;
+
+    [&]<auto... I>(std::index_sequence<I...>) {
+        ([&](const auto &reaction) {
+            using ReactionType = std::tuple_element_t<I, typename System::ReactionsO2>;
+            using ReactionImpl = detail::CPUReactionO2<Updater, ReactionType>;
+            backingData.push_back(std::make_unique<ReactionImpl>(reaction));
+            const auto &ref = backingData.back();
+            map[ReactionImpl{reaction}.key()].push_back(ref.get());
+        }(std::get<I>(system.reactionsO2)), ...);
+    }(std::make_index_sequence<std::tuple_size_v<typename System::ReactionsO2>>{});
     return std::make_tuple(map, std::move(backingData));
 }
 
