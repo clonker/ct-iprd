@@ -39,14 +39,28 @@ template<typename dtype, typename State, typename ParticleType>
 
 }
 
-template<typename Reaction>
+template<std::size_t DIM, typename dtype, typename State, typename ParticleType>
+struct BaseReaction {
+
+};
+
+template<std::size_t DIM, typename dtype, typename State, typename ParticleType>
+struct BaseReactionO1 : BaseReaction<DIM, dtype, State, ParticleType> {
+    [[nodiscard]] virtual bool shouldPerform(dtype tau, const State &state, const ParticleType &t) const = 0;
+};
+
+template<std::size_t DIM, typename dtype, typename State, typename ParticleType>
+struct BaseReactionO2 : BaseReaction<DIM, dtype, State, ParticleType> {
+    [[nodiscard]] virtual bool shouldPerform(dtype tau, const State &s1, const ParticleType &t1, const State &s2, const ParticleType &t2) const = 0;
+};
+
+template<typename Reaction, std::size_t DIM, typename dtype, typename State, typename ParticleType>
 struct ReactionImpl;
 
-template<typename dtype>
-struct ReactionImpl<reactions::doi::Decay<dtype>> {
+template<std::size_t DIM, typename dtype, typename State, typename ParticleType>
+struct ReactionImpl<reactions::doi::Decay<dtype>, DIM, dtype, State, ParticleType> : BaseReactionO1<DIM, dtype, State, ParticleType> {
     explicit ReactionImpl(const reactions::doi::Decay<dtype> *reaction) : reaction(reaction) {}
 
-    template<typename State, typename ParticleType>
     [[nodiscard]] bool shouldPerform(dtype tau, const State &state, const ParticleType &t) const {
         return detail::shouldPerformO1(tau, state, t, reaction);
     }
@@ -59,11 +73,10 @@ struct ReactionImpl<reactions::doi::Decay<dtype>> {
     const reactions::doi::Decay<dtype> *reaction;
 };
 
-template<typename dtype>
-struct ReactionImpl<reactions::doi::Conversion<dtype>> {
+template<std::size_t DIM, typename dtype, typename State, typename ParticleType>
+struct ReactionImpl<reactions::doi::Conversion<dtype>, DIM, dtype, State, ParticleType> : BaseReactionO1<DIM, dtype, State, ParticleType> {
     explicit ReactionImpl(const reactions::doi::Conversion<dtype> *reaction) : reaction(reaction) {}
 
-    template<typename State, typename ParticleType>
     [[nodiscard]] bool shouldPerform(dtype tau, const State &state, const ParticleType &t) const {
         return detail::shouldPerformO1(tau, state, t, reaction);
     }
@@ -76,11 +89,10 @@ struct ReactionImpl<reactions::doi::Conversion<dtype>> {
     const reactions::doi::Conversion<dtype> *reaction;
 };
 
-template<typename dtype>
-struct ReactionImpl<reactions::doi::Fission<dtype>> {
+template<std::size_t DIM, typename dtype, typename State, typename ParticleType>
+struct ReactionImpl<reactions::doi::Fission<dtype>, DIM, dtype, State, ParticleType> : BaseReactionO1<DIM, dtype, State, ParticleType> {
     explicit ReactionImpl(const reactions::doi::Fission<dtype> *reaction) : reaction(reaction) {}
 
-    template<typename State, typename ParticleType>
     [[nodiscard]] bool shouldPerform(dtype tau, const State &state, const ParticleType &t) const {
         return detail::shouldPerformO1(tau, state, t, reaction);
     }
@@ -113,11 +125,10 @@ struct ReactionImpl<reactions::doi::Fission<dtype>> {
     }
 };
 
-template<typename dtype>
-struct ReactionImpl<reactions::doi::Catalysis<dtype>> {
+template<std::size_t DIM, typename dtype, typename State, typename ParticleType>
+struct ReactionImpl<reactions::doi::Catalysis<dtype>, DIM, dtype, State, ParticleType> : BaseReactionO2<DIM, dtype, State, ParticleType> {
     explicit ReactionImpl(const reactions::doi::Catalysis<dtype> *reaction) : reaction(reaction) {}
 
-    template<typename State, typename ParticleType>
     [[nodiscard]] bool shouldPerform(dtype tau, const State &state, const ParticleType &t,
                                      const State &state2, const ParticleType &t2) const {
         return detail::shouldPerformO2(tau, state, t, state2, t2,
@@ -137,11 +148,10 @@ struct ReactionImpl<reactions::doi::Catalysis<dtype>> {
     const reactions::doi::Catalysis<dtype> *reaction;
 };
 
-template<typename dtype>
-struct ReactionImpl<reactions::doi::Fusion<dtype>> {
+template<std::size_t DIM, typename dtype, typename State, typename ParticleType>
+struct ReactionImpl<reactions::doi::Fusion<dtype>, DIM, dtype, State, ParticleType> : BaseReactionO2<DIM, dtype, State, ParticleType>  {
     explicit ReactionImpl(const reactions::doi::Fusion<dtype> *reaction) : reaction(reaction) {}
 
-    template<typename State, typename ParticleType>
     [[nodiscard]] bool shouldPerform(dtype tau, const State &state, const ParticleType &t,
                                      const State &state2, const ParticleType &t2) const {
         return detail::shouldPerformO2(tau, state, t, state2, t2, reaction->eductType1, reaction->eductType2,
