@@ -2,6 +2,7 @@
 #include <type_traits>
 #include <map>
 #include <unordered_map>
+#include <random>
 
 #include <benchmark/benchmark.h>
 
@@ -61,34 +62,49 @@ static void SortedMap(benchmark::State& state) {
     using Key = std::tuple<const int, const int>;
     std::map<Key, std::string, TupleCompare<Key>> map;
     for (int i = 0; i < state.range(); ++i) {
-        for (int j = 0; j < state.range(); ++j) {
+        for (int j = i+1; j < state.range(); ++j) {
             map[std::make_tuple(i, j)] = "huhu" + std::to_string(i) + std::to_string(j);
         }
     }
 
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> distrib(0, state.range()-1);
+
     for (auto _ : state) {
-        // benchmark::DoNotOptimize(map[std::make_tuple(state.range() / 2, state.range() / 2)]);
-        benchmark::DoNotOptimize(map[std::make_tuple(5, 3)]);
+        state.PauseTiming();
+        auto i = distrib(gen);
+        auto j = distrib(gen);
+        state.ResumeTiming();
+        benchmark::DoNotOptimize(map[std::make_tuple(i, j)]);
     }
 }
 // Register the function as a benchmark
-BENCHMARK(SortedMap)->Range(5, 1000);
+BENCHMARK(SortedMap)->DenseRange(1, 50, 1);
 
 static void HashMap(benchmark::State& state) {
     // Code before the loop is not measured
     using Key = std::tuple<int, int>;
     std::unordered_map<Key, std::string, ForwardBackwardTupleHasher<Key>, ForwardBackwardTupleEquality<Key>> map;
     for (int i = 0; i < state.range(); ++i) {
-        for (int j = 0; j < state.range(); ++j) {
+        for (int j = i+1; j < state.range(); ++j) {
             map[std::make_tuple(i, j)] = "huhu" + std::to_string(i) + std::to_string(j);
         }
     }
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> distrib(0, state.range()-1);
+
     for (auto _ : state) {
-        // benchmark::DoNotOptimize(map[std::make_tuple(state.range() / 2, state.range() / 2)]);
-        benchmark::DoNotOptimize(map[std::make_tuple(5, 3)]);
+        state.PauseTiming();
+        auto i = distrib(gen);
+        auto j = distrib(gen);
+        state.ResumeTiming();
+        benchmark::DoNotOptimize(map[std::make_tuple(i, j)]);
     }
 }
-BENCHMARK(HashMap)->Range(5, 1000);
+BENCHMARK(HashMap)->DenseRange(1, 50, 1);
 
 
 BENCHMARK_MAIN();
