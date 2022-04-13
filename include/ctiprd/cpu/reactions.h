@@ -21,6 +21,8 @@ struct ReactionO1 {
     using dtype = typename Updater::dtype;
     using State = typename Updater::Position;
     [[nodiscard]] virtual bool shouldPerform(dtype tau, const State &s1, const std::size_t &t1) const { return false; };
+
+    virtual void operator()(std::size_t id, typename Updater::Particles &collection, Updater &updater) {}
 };
 
 template<typename Updater>
@@ -29,6 +31,8 @@ struct ReactionO2 {
     using State = typename Updater::Position;
     [[nodiscard]] virtual bool shouldPerform(dtype tau, const State &s1, const std::size_t &t1,
                                              const State &s2, const std::size_t &t2) const { return false; };
+
+    virtual void operator()(std::size_t id1, std::size_t id2, typename Updater::Particles &collection, Updater &updater) {}
 };
 
 namespace detail {
@@ -65,6 +69,10 @@ struct CPUReactionO1<Updater, ctiprd::reactions::doi::Decay<typename Updater::dt
         return detail::shouldPerformO1(tau, s1, t1, baseReaction);
     }
 
+    void operator()(std::size_t id, typename Updater::Particles &collection, Updater &updater) {
+        updater.remove(id, collection);
+    }
+
     ReactionType baseReaction;
 };
 
@@ -80,6 +88,10 @@ struct CPUReactionO1<Updater, ctiprd::reactions::doi::Conversion<typename Update
         return detail::shouldPerformO1(tau, s1, t1, baseReaction);
     }
 
+    void operator()(std::size_t id, typename Updater::Particles &collection, Updater &updater) {
+        updater.directUpdate(id, baseReaction.productType, {}, collection);
+    }
+
     ReactionType baseReaction;
 };
 
@@ -93,6 +105,30 @@ struct CPUReactionO1<Updater, ctiprd::reactions::doi::Fission<typename Updater::
 
     bool shouldPerform(dtype tau, const State &s1, const std::size_t &t1) const override {
         return detail::shouldPerformO1(tau, s1, t1, baseReaction);
+    }
+
+    template<typename Generator>
+    static auto normal(Generator &generator) {
+        static std::normal_distribution<dtype> dist{0, 1};
+        return dist(generator);
+    }
+    template<typename Generator>
+    static auto uniform(Generator &generator) {
+        static std::uniform_real_distribution<dtype> dist{0, 1};
+        return dist(generator);
+    }
+
+    void operator()(std::size_t id, typename Updater::Particles &collection, Updater &updater) {
+        const auto &c = collection.positionOf(id);
+        State n {};
+        std::transform(begin(n.data), end(n.data), begin(n.data), [](const auto &) {
+            return normal(rnd::staticThreadLocalGenerator());
+        });
+        n /= n.norm();
+
+        const auto distance = baseReaction.productDistance * std::pow(uniform(rnd::staticThreadLocalGenerator()), 1/Updater::dim);
+        updater.add(baseReaction.productType2, c - 0.5 * distance * n);
+        updater.directUpdate(id, baseReaction.productType1, c + 0.5 * distance * n, collection);
     }
 
     ReactionType baseReaction;
@@ -119,6 +155,22 @@ struct CPUReactionO2<Updater, ctiprd::reactions::doi::Fusion<typename Updater::d
         return std::make_tuple(baseReaction.eductType1, baseReaction.eductType2);
     };
 
+    void operator()(std::size_t id1, std::size_t id2, typename Updater::Particles &collection, Updater &updater) {
+        if (updater.claim(id1)) {
+            if (updater.claim(id2)) {
+                auto w1 = collection.typeOf(id1) == baseReaction.eductType1 ? baseReaction.w1 : baseReaction.w2;
+                updater.template directUpdate<false>(
+                        id1, baseReaction.productType,
+                        collection.positionOf(id1) + w1 * (collection.positionOf(id2) - collection.positionOf(id1)),
+                        collection
+                );
+                updater.template remove<false>(id2, collection);
+            } else {
+                updater.release(id1);
+            }
+        }
+    }
+
     ReactionType baseReaction;
 };
 
@@ -139,6 +191,14 @@ struct CPUReactionO2<Updater, ctiprd::reactions::doi::Catalysis<typename Updater
     [[nodiscard]] auto key() const {
         return std::make_tuple(baseReaction.catalyst, baseReaction.eductType);
     };
+
+    void operator()(std::size_t id1, std::size_t id2, typename Updater::Particles &collection, Updater &updater) {
+        if(collection.typeOf(id1) == baseReaction.catalyst) {
+            updater.directUpdate(id2, baseReaction.productType, {}, collection);
+        } else {
+            updater.directUpdate(id1, baseReaction.productType, {}, collection);
+        }
+    }
 
     ReactionType baseReaction;
 };

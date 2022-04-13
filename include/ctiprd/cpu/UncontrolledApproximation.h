@@ -17,176 +17,10 @@
 
 namespace ctiprd::cpu {
 
-namespace impl {
-
-namespace detail {
-
-template<typename dtype, typename State, typename ParticleType, typename Reaction>
-[[nodiscard]] bool shouldPerformO1(dtype tau, const State &state, const ParticleType &t, const Reaction* reaction) {
-    return t == reaction->eductType && rnd::uniform_real<dtype>() < 1 - std::exp(-reaction->rate * tau);
-}
-
-template<typename dtype, typename State, typename ParticleType>
-[[nodiscard]] bool shouldPerformO2(dtype tau, const State &state, const ParticleType &t,
-                                 const State &state2, const ParticleType &t2,
-                                 const ParticleType &eductType1, const ParticleType &eductType2,
-                                 dtype rate, dtype radius) {
-    if ((t == eductType1 && t2 == eductType2) || (t == eductType2 && t2 == eductType1)) {
-        return (state - state2).normSquared() < radius * radius &&
-               rnd::uniform_real<dtype>() < 1 - std::exp(-rate * tau);
-    }
-    return false;
-}
-
-}
-
-template<std::size_t DIM, typename dtype, typename State, typename ParticleType>
-struct BaseReaction {
-};
-
-template<std::size_t DIM, typename dtype, typename State, typename ParticleType>
-struct BaseReactionO1 : BaseReaction<DIM, dtype, State, ParticleType> {
-    [[nodiscard]] virtual bool shouldPerform(dtype tau, const State &state, const ParticleType &t) const = 0;
-};
-
-template<std::size_t DIM, typename dtype, typename State, typename ParticleType>
-struct BaseReactionO2 : BaseReaction<DIM, dtype, State, ParticleType> {
-    [[nodiscard]] virtual bool shouldPerform(dtype tau, const State &s1, const ParticleType &t1, const State &s2, const ParticleType &t2) const = 0;
-};
-
-template<typename Reaction, std::size_t DIM, typename dtype, typename State, typename ParticleType>
-struct ReactionImpl;
-
-template<std::size_t DIM, typename dtype, typename State, typename ParticleType>
-struct ReactionImpl<ctiprd::reactions::doi::Decay<dtype>, DIM, dtype, State, ParticleType> : BaseReactionO1<DIM, dtype, State, ParticleType> {
-    explicit ReactionImpl(const ctiprd::reactions::doi::Decay<dtype> *reaction) : reaction(reaction) {}
-
-    [[nodiscard]] bool shouldPerform(dtype tau, const State &state, const ParticleType &t) const {
-        return detail::shouldPerformO1(tau, state, t, reaction);
-    }
-
-    template<typename Updater>
-    void operator()(auto id1, auto /*ignore*/, typename Updater::Particles &collection, Updater &updater) {
-        updater.remove(id1, collection);
-    }
-
-    const ctiprd::reactions::doi::Decay<dtype> *reaction;
-};
-
-template<std::size_t DIM, typename dtype, typename State, typename ParticleType>
-struct ReactionImpl<ctiprd::reactions::doi::Conversion<dtype>, DIM, dtype, State, ParticleType> : BaseReactionO1<DIM, dtype, State, ParticleType> {
-    explicit ReactionImpl(const ctiprd::reactions::doi::Conversion<dtype> *reaction) : reaction(reaction) {}
-
-    [[nodiscard]] bool shouldPerform(dtype tau, const State &state, const ParticleType &t) const {
-        return detail::shouldPerformO1(tau, state, t, reaction);
-    }
-
-    template<typename Updater>
-    void operator()(auto id1, auto /*ignore*/, typename Updater::Particles &collection, Updater &updater) {
-        updater.directUpdate(id1, reaction->productType, {}, collection);
-    }
-
-    const ctiprd::reactions::doi::Conversion<dtype> *reaction;
-};
-
-template<std::size_t DIM, typename dtype, typename State, typename ParticleType>
-struct ReactionImpl<ctiprd::reactions::doi::Fission<dtype>, DIM, dtype, State, ParticleType> : BaseReactionO1<DIM, dtype, State, ParticleType> {
-    explicit ReactionImpl(const ctiprd::reactions::doi::Fission<dtype> *reaction) : reaction(reaction) {}
-
-    [[nodiscard]] bool shouldPerform(dtype tau, const State &state, const ParticleType &t) const {
-        return detail::shouldPerformO1(tau, state, t, reaction);
-    }
-
-    template<typename Updater, typename Particles = typename Updater::Particles>
-    void operator()(auto id1, auto /*ignore*/, Particles &collection, Updater &updater) {
-        const auto &c = collection.positionOf(id1);
-        typename Particles::Position n {};
-        std::transform(begin(n.data), end(n.data), begin(n.data), [](const auto &) {
-            return normal(rnd::staticThreadLocalGenerator());
-        });
-        n /= n.norm();
-
-        const auto distance = reaction->productDistance * std::pow(uniform(rnd::staticThreadLocalGenerator()), 1/Particles::DIM);
-        updater.add(reaction->productType2, c - 0.5 * distance * n);
-        updater.directUpdate(id1, reaction->productType1, c + 0.5 * distance * n, collection);
-    }
-
-    const ctiprd::reactions::doi::Fission<dtype> *reaction;
-
-    template<typename Generator>
-    static auto normal(Generator &generator) {
-        static std::normal_distribution<dtype> dist{0, 1};
-        return dist(generator);
-    }
-    template<typename Generator>
-    static auto uniform(Generator &generator) {
-        static std::uniform_real_distribution<dtype> dist{0, 1};
-        return dist(generator);
-    }
-};
-
-template<std::size_t DIM, typename dtype, typename State, typename ParticleType>
-struct ReactionImpl<ctiprd::reactions::doi::Catalysis<dtype>, DIM, dtype, State, ParticleType> : BaseReactionO2<DIM, dtype, State, ParticleType> {
-    explicit ReactionImpl(const ctiprd::reactions::doi::Catalysis<dtype> *reaction) : reaction(reaction) {}
-
-    [[nodiscard]] bool shouldPerform(dtype tau, const State &state, const ParticleType &t,
-                                     const State &state2, const ParticleType &t2) const {
-        return detail::shouldPerformO2(tau, state, t, state2, t2,
-                                       reaction->catalyst, reaction->eductType, reaction->rate,
-                                       reaction->reactionRadius);
-    }
-
-    template<typename Updater>
-    void operator()(auto id1, auto id2, typename Updater::Particles &collection, Updater &updater) {
-        if(collection.typeOf(id1) == reaction->catalyst) {
-            updater.directUpdate(id2, reaction->productType, {}, collection);
-        } else {
-            updater.directUpdate(id1, reaction->productType, {}, collection);
-        }
-    }
-
-    const ctiprd::reactions::doi::Catalysis<dtype> *reaction;
-};
-
-template<std::size_t DIM, typename dtype, typename State, typename ParticleType>
-struct ReactionImpl<ctiprd::reactions::doi::Fusion<dtype>, DIM, dtype, State, ParticleType> : BaseReactionO2<DIM, dtype, State, ParticleType>  {
-    explicit ReactionImpl(const ctiprd::reactions::doi::Fusion<dtype> *reaction) : reaction(reaction) {}
-
-    [[nodiscard]] bool shouldPerform(dtype tau, const State &state, const ParticleType &t,
-                                     const State &state2, const ParticleType &t2) const {
-        return detail::shouldPerformO2(tau, state, t, state2, t2, reaction->eductType1, reaction->eductType2,
-                                       reaction->rate, reaction->reactionRadius);
-    }
-
-    template<typename Updater>
-    void operator()(auto id1, auto id2, typename Updater::Particles &collection, Updater &updater) {
-        if (updater.claim(id1)) {
-            if (updater.claim(id2)) {
-                auto w1 = collection.typeOf(id1) == reaction->eductType1 ? reaction->w1 : reaction->w2;
-                updater.template directUpdate<false>(
-                        id1, reaction->productType,
-                        collection.positionOf(id1) + w1 * (collection.positionOf(id2) - collection.positionOf(id1)),
-                        collection
-                );
-                updater.template remove<false>(id2, collection);
-            } else {
-                updater.release(id1);
-            }
-        }
-    }
-    const ctiprd::reactions::doi::Fusion<dtype> *reaction;
-};
-
-}
-
-template<typename dtype, typename Updater>
 struct ReactionEvent {
+    std::uint8_t nEducts;
     std::size_t id1, id2;
-    std::function<void(std::size_t id1, std::size_t id2, typename Updater::Particles &, Updater&)> perform;
-
-    void operator()(typename Updater::Particles &particles, Updater &updater) {
-        perform(id1, id2, particles, updater);
-    }
+    std::size_t reactionIndex;
 };
 
 template<typename ParticleCollection, typename System, typename Generator=config::DefaultGenerator>
@@ -224,13 +58,13 @@ struct UncontrolledApproximation {
         }
 
         std::mutex mutex;
-        std::vector<ReactionEvent<dtype, Updater>> events;
+        std::vector<ReactionEvent> events;
         {
             auto worker = [&system, tau, nl = neighborList_.get(), data = particles.get(), &events, &mutex](
                     auto id, typename ParticleCollection::Position &pos, const typename ParticleCollection::ParticleType &type,
                     typename ParticleCollection::Force &force
             ) {
-                std::vector<ReactionEvent<dtype, Updater>> localEvents;
+                std::vector<ReactionEvent> localEvents;
 
                 /*std::apply([&pos, &type, &localEvents, &tau, &id](auto &&... reaction) {
                     (

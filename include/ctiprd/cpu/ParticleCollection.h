@@ -381,6 +381,7 @@ struct ParticleCollectionUpdater {
     using State = Position;
     using Index = typename ParticleCollection::size_type;
     using dtype = typename Particles::dtype;
+    static constexpr int dim = Particles::dim;
 
     explicit ParticleCollectionUpdater(const ParticleCollection &collection) : changed(collection.size()) {}
 
