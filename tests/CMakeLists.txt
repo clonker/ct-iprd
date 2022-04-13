@@ -7,6 +7,7 @@ set(TEST_SRC
         test_system.cpp
         test_reactions.cpp
         test_integration.cpp
+        test_reactions_map.cpp
         test_cuda.cu
         test_michaelis_menten.cpp
         test_forward_backward_map.cpp)

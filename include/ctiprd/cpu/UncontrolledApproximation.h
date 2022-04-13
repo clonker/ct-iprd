@@ -224,7 +224,7 @@ struct UncontrolledApproximation {
             ) {
                 std::vector<ReactionEvent<dtype, Updater>> localEvents;
 
-                std::apply([&pos, &type, &localEvents, &tau, &id](auto &&... reaction) {
+                /*std::apply([&pos, &type, &localEvents, &tau, &id](auto &&... reaction) {
                     (
                             ([&localEvents, &pos, &type, &tau, &id](const auto &r) {
                                 impl::ReactionImpl<std::decay_t<decltype(r)>> impl {&r};
@@ -258,7 +258,7 @@ struct UncontrolledApproximation {
                                     ...);
                         }, system.reactionsO2);
                     });
-                }
+                }*/
 
                 {
                     std::scoped_lock lock{mutex};

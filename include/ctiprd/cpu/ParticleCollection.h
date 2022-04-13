@@ -378,7 +378,9 @@ struct ParticleCollectionUpdater {
     using Particles = ParticleCollection;
     using ParticleType = typename ParticleCollection::ParticleType;
     using Position = typename ParticleCollection::Position;
+    using State = Position;
     using Index = typename ParticleCollection::size_type;
+    using dtype = typename Particles::dtype;
 
     explicit ParticleCollectionUpdater(const ParticleCollection &collection) : changed(collection.size()) {}
 

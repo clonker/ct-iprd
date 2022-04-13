@@ -7,18 +7,25 @@
 #include <tuple>
 #include <vector>
 #include <unordered_map>
+#include <list>
+#include <memory>
 
 #include <ctiprd/util/hash.h>
 #include <ctiprd/reactions/doi.h>
+#include <spdlog/spdlog.h>
 
 namespace ctiprd::cpu::reactions::doi {
 
-template<typename ParticleCollection>
+template<typename Updater>
 struct ReactionO1 {
-    using dtype = typename ParticleCollection::dtype;
-    using State = typename ParticleCollection::Position;
+    using dtype = typename Updater::dtype;
+    using State = typename Updater::Position;
 
-    [[nodiscard]] virtual bool shouldPerform(dtype tau, const State &s1, const std::size_t &t1) const = 0;
+    ReactionO1(std::size_t eductType) : eductType(eductType) {}
+
+    [[nodiscard]] virtual bool shouldPerform(dtype tau, const State &s1, const std::size_t &t1) const { return false; };
+
+    std::size_t eductType {};
 };
 
 template<typename ParticleCollection>
@@ -27,7 +34,7 @@ struct ReactionO2 {
     using State = typename ParticleCollection::Position;
 
     [[nodiscard]] virtual bool shouldPerform(dtype tau, const State &s1, const std::size_t &t1,
-                                             const State &s2, const std::size_t &t2) const = 0;
+                                             const State &s2, const std::size_t &t2) const { return false; };
 };
 
 namespace detail {
@@ -49,21 +56,55 @@ template<typename dtype, typename State, typename ParticleType>
     return false;
 }
 
-template<typename ParticleCollection, typename Reaction>
-struct CPUReaction;
+template<typename Updater, typename Reaction>
+struct CPUReactionO1 : ReactionO1<Updater> {};
 
-template<typename ParticleCollection>
-struct CPUReaction<ParticleCollection, ctiprd::reactions::doi::Decay<typename ParticleCollection::dtype>>
-        : ReactionO1<ParticleCollection>, ctiprd::reactions::doi::Decay<typename ParticleCollection::dtype> {
-    using SuperReaction = ctiprd::reactions::doi::Decay<typename ParticleCollection::dtype>;
-    using typename ReactionO1<ParticleCollection>::dtype;
-    using typename ReactionO1<ParticleCollection>::State;
+template<typename Updater>
+struct CPUReactionO1<Updater, ctiprd::reactions::doi::Decay<typename Updater::dtype>> : ReactionO1<Updater> {
+    using ReactionType = ctiprd::reactions::doi::Decay<typename Updater::dtype>;
+    using typename ReactionO1<Updater>::dtype;
+    using typename ReactionO1<Updater>::State;
 
-    explicit CPUReaction(const SuperReaction &reaction) : SuperReaction(reaction) {}
+    explicit CPUReactionO1(const ReactionType &reaction)
+        : ReactionO1<Updater>(reaction.eductType), baseReaction(reaction) {}
 
     bool shouldPerform(dtype tau, const State &s1, const std::size_t &t1) const override {
-        return detail::shouldPerformO1(tau, s1, t1, *this);
+        return detail::shouldPerformO1(tau, s1, t1, baseReaction);
     }
+
+    ReactionType baseReaction;
+};
+
+template<typename Updater>
+struct CPUReactionO1<Updater, ctiprd::reactions::doi::Conversion<typename Updater::dtype>> : ReactionO1<Updater> {
+    using ReactionType = ctiprd::reactions::doi::Conversion<typename Updater::dtype>;
+    using typename ReactionO1<Updater>::dtype;
+    using typename ReactionO1<Updater>::State;
+
+    explicit CPUReactionO1(const ReactionType &reaction)
+            : ReactionO1<Updater>(reaction.eductType), baseReaction(reaction) {}
+
+    bool shouldPerform(dtype tau, const State &s1, const std::size_t &t1) const override {
+        return detail::shouldPerformO1(tau, s1, t1, baseReaction);
+    }
+
+    ReactionType baseReaction;
+};
+
+template<typename Updater>
+struct CPUReactionO1<Updater, ctiprd::reactions::doi::Fission<typename Updater::dtype>> : ReactionO1<Updater> {
+    using ReactionType = ctiprd::reactions::doi::Fission<typename Updater::dtype>;
+    using typename ReactionO1<Updater>::dtype;
+    using typename ReactionO1<Updater>::State;
+
+    explicit CPUReactionO1(const ReactionType &reaction)
+            : ReactionO1<Updater>(reaction.eductType), baseReaction(reaction) {}
+
+    bool shouldPerform(dtype tau, const State &s1, const std::size_t &t1) const override {
+        return detail::shouldPerformO1(tau, s1, t1, baseReaction);
+    }
+
+    ReactionType baseReaction;
 };
 
 using KeyO2 = std::tuple<std::size_t, std::size_t>;
@@ -73,14 +114,28 @@ using EqO2 = ctiprd::util::hash::ForwardBackwardTupleEquality<KeyO2>;
 
 }
 
-template<typename ParticleCollection>
-using ReactionsO1Map = std::unordered_map<std::size_t, std::vector<ReactionO1<ParticleCollection>*>>;
+template<typename Updater>
+using ReactionsO1Map = std::unordered_map<std::size_t, std::vector<const ReactionO1<Updater>*>>;
 
-template<typename ParticleCollection>
-using ReactionsO2Map = std::unordered_map<detail::KeyO2, std::vector<ReactionO2<ParticleCollection>*>, detail::HasherO2, detail::EqO2>;
+template<typename Updater>
+using ReactionsO2Map = std::unordered_map<detail::KeyO2, std::vector<const ReactionO2<Updater>*>, detail::HasherO2, detail::EqO2>;
 
 
-auto generateMapO1() {
+template<typename Updater, typename System>
+std::tuple<ReactionsO1Map<Updater>, std::list<std::unique_ptr<ReactionO1<Updater>>>> generateMapO1(const System &system) {
+    std::list<std::unique_ptr<ReactionO1<Updater>>> backingData {};
+    ReactionsO1Map<Updater> map;
+
+    [&]<auto... I>(std::index_sequence<I...>) {
+        constexpr std::array is{I...};
+        ([&](const auto &reaction) {
+            using ReactionType = std::tuple_element_t<is[I], typename System::ReactionsO1>;
+            backingData.push_back(std::make_unique<detail::CPUReactionO1<Updater, ReactionType>>(reaction));
+            const auto &ref = backingData.back();
+            map[ref->eductType].push_back(ref.get());
+        }(std::get<is[I]>(system.reactionsO1)), ...);
+    }(std::make_index_sequence<std::tuple_size_v<typename System::ReactionsO1>>{});
+    return std::make_tuple(map, std::move(backingData));
 }
 
 }
