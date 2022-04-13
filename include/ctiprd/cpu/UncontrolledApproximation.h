@@ -118,7 +118,7 @@ struct UncontrolledApproximation {
             Updater updater {*particles};
 
             for(auto it = begin(events); it != end(events); ++it) {
-                (*it)(*particles, updater);
+                //(*it)(*particles, updater);
             }
 
             particles->update(begin(updater.toAdd), end(updater.toAdd), begin(updater.toRemove), end(updater.toRemove));
