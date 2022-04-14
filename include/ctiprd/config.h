@@ -5,6 +5,7 @@
 
 #include <thread>
 #include <random>
+#include <memory>
 
 #include <spdlog/spdlog.h>
 
