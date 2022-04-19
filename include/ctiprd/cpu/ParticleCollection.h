@@ -218,13 +218,13 @@ public:
     template<typename F, typename Pool,
             typename R=std::invoke_result_t<std::decay_t<F>, std::size_t, Position&, ParticleType, Force&>,
             typename = std::enable_if_t<std::is_void_v<R>>>
-    std::vector<std::future<void>> forEachParticle(const F &op, config::PoolPtr<Pool> pool) {
+    std::vector<std::future<void>> forEachParticle(F &&op, config::PoolPtr<Pool> pool) {
         std::vector<std::future<void>> futures;
         auto granularity = config::threadGranularity(pool);
         futures.reserve(granularity);
 
-        detail::Loop<Info, F> loop {op};
-        /*auto loop = [operation = std::forward<F>(op)](
+        // detail::Loop<Info, F> loop {op};
+        auto loop = [operation = std::forward<F>(op)](
                 auto startIndex,
                 const auto &beginPositions, const auto &endPositions,
                 auto itTypes, auto itForces, auto itVelocities
@@ -249,7 +249,7 @@ public:
                     ++itVelocities;
                 }
             }
-        };*/
+        };
 
         auto n = size();
         auto grainSize = n / granularity;
@@ -261,8 +261,8 @@ public:
         std::size_t beginIx = 0;
         for (std::size_t i = 0; i < granularity - 1; ++i) {
             if (itPos != positions_.end()) {
-                futures.push_back(pool->push(loop, beginIx, grainSize, itPos, itTypes, itForces));
-                //futures.push_back(pool->push(loop, beginIx, itPos, itPos + grainSize, itTypes, itForces, itVelocities));
+                //futures.push_back(pool->push(loop, beginIx, grainSize, itPos, itTypes, itForces));
+                futures.push_back(pool->push(loop, beginIx, itPos, itPos + grainSize, itTypes, itForces, itVelocities));
             }
             beginIx += grainSize;
             itPos += grainSize;
@@ -275,8 +275,8 @@ public:
             }
         }
         if (itPos != positions_.end()) {
-            futures.push_back(pool->push(loop, beginIx, std::distance(itPos, end(positions_)), itPos, itTypes, itForces));
-            //futures.push_back(pool->push(loop, beginIx, itPos, end(positions_), itTypes, itForces, itVelocities));
+            //futures.push_back(pool->push(loop, beginIx, std::distance(itPos, end(positions_)), itPos, itTypes, itForces));
+            futures.push_back(pool->push(loop, beginIx, itPos, end(positions_), itTypes, itForces, itVelocities));
         }
 
         return std::move(futures);

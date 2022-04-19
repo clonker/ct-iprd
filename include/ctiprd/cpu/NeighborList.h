@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <atomic>
 #include <thread>
+#include <unordered_set>
 
 #include <ctiprd/config.h>
 #include <ctiprd/util/ops.h>
@@ -15,7 +16,7 @@
 
 namespace ctiprd::cpu::nl {
 
-template<int DIM, bool periodic, typename dtype>
+template<int DIM, bool periodic, typename dtype, bool allTypes=true>
 class NeighborList {
 public:
     NeighborList(std::array<dtype, DIM> gridSize, dtype interactionRadius, int nSubdivides = 2)
@@ -36,19 +37,35 @@ public:
     NeighborList(NeighborList&&) noexcept = default;
     NeighborList &operator=(NeighborList&&) noexcept = default;
 
+    void setTypes(const std::unordered_set<std::size_t> &allowedTypes) {
+        if constexpr(!allTypes) {
+            types = allowedTypes;
+        }
+    }
+
+    constexpr bool isAllowedType(const auto &type) const {
+        if constexpr(allTypes) {
+            return true;
+        } else {
+            return types.find(type) != end(types);
+        }
+    }
+
     template<typename ParticleCollection, typename Pool>
     void update(std::shared_ptr<ParticleCollection> collection, std::shared_ptr<Pool> pool) {
         list.resize(collection->size() + 1);
         std::fill(std::begin(list), std::end(list), 0);
         std::fill(std::begin(head), std::end(head), thread::copyable_atomic<std::size_t>());
-        auto updateOp = [this](std::size_t particleId, const auto &pos, const auto &/*ignore*/, const auto&/*noe*/) {
-            auto boxId = positionToBoxIx(&pos.data[0]);
+        auto updateOp = [this](std::size_t particleId, const auto &pos, const auto &type, const auto&/*noe*/) {
+            if(isAllowedType(type)) {
+                auto boxId = positionToBoxIx(&pos.data[0]);
 
-            // CAS
-            auto &atomic = *head.at(boxId);
-            auto currentHead = atomic.load();
-            while (!atomic.compare_exchange_weak(currentHead, particleId)) {}
-            list[particleId] = currentHead;
+                // CAS
+                auto &atomic = *head.at(boxId);
+                auto currentHead = atomic.load();
+                while (!atomic.compare_exchange_weak(currentHead, particleId)) {}
+                list[particleId] = currentHead;
+            }
         };
 
         collection->forEachParticle(updateOp, pool);
@@ -68,6 +85,19 @@ public:
     std::uint32_t positionToBoxIx(const dtype *pos) const {
         auto boxId = _index.index(gridPos(pos));
         return boxId;
+    }
+
+    std::uint32_t cellNeighborsBegin(std::uint32_t cellIndex, auto dim) const {
+        if constexpr(!periodic) {
+            // return gridPos[dim] >= nSubdivides ? (gridPos[i] - nSubdivides) : 0;
+        } else {
+
+        }
+    }
+
+    template<typename F, typename Pool, typename PoolPtr = config::PoolPtr<Pool>>
+    void forEachCell(F &&f, PoolPtr pool) {
+
     }
 
     template<typename ParticleCollection, typename F>
@@ -124,6 +154,7 @@ private:
     util::Index<DIM> _index{};
     std::array<std::uint32_t, DIM> nCells{};
     int nSubdivides;
+    std::unordered_set<std::size_t> types {};
 };
 
 }

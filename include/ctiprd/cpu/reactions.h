@@ -225,6 +225,13 @@ std::tuple<ReactionsO1Map<Updater>, ReactionsO1Backing<Updater>> generateMapO1(c
     ReactionsO1Backing<Updater> backingData {};
     ReactionsO1Map<Updater> map;
 
+    {
+        for (const auto &[name, _] : System::types) {
+            auto id = ctiprd::systems::particleTypeId<System::types>(name);
+            map[id] = {};
+        }
+    }
+
     [&]<auto... I>(std::index_sequence<I...>) {
         ([&](const auto &reaction) {
             using ReactionType = std::tuple_element_t<I, typename System::ReactionsO1>;
@@ -240,6 +247,16 @@ template<typename Updater, typename System>
 std::tuple<ReactionsO2Map<Updater>, ReactionsO2Backing<Updater>> generateMapO2(const System &system) {
     ReactionsO2Backing<Updater> backingData {};
     ReactionsO2Map<Updater> map;
+
+    {
+        for (const auto &[name1, d1] : System::types) {
+            auto id1 = ctiprd::systems::particleTypeId<System::types>(name1);
+            for (const auto &[name2, d2] : System::types) {
+                auto id2 = ctiprd::systems::particleTypeId<System::types>(name2);
+                map[{id1, id2}] = {};
+            }
+        }
+    }
 
     [&]<auto... I>(std::index_sequence<I...>) {
         ([&](const auto &reaction) {

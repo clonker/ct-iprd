@@ -50,7 +50,7 @@ SCENARIO("Particle collection can have different flags") {
                     f[0] = 11;
                     f[1] = -11;
                 }, pool);
-                std::for_each(begin(futures), end(futures), [](auto &f) { f.wait(); });
+                pool->waitForTasks();
 
                 THEN("This modification is reflected in the data") {
                     Collection::ContainerType<Collection::MaybePosition> vecRef (1000, {{55, 22}});

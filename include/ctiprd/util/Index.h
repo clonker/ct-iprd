@@ -24,15 +24,36 @@ struct ComputeIndex {
     static constexpr auto computeContainer(const Arr &strides, const Arr2 &tup, std::index_sequence<I...>) {
         return (0 + ... + (strides[I] * std::get<I>(tup)));
     }
+
 };
+
+template<typename GridDims, typename Strides, std::size_t N = std::tuple_size_v<Strides>>
+constexpr GridDims indexInverse(const Strides &strides, std::size_t ix) {
+    /*GridDims result {};
+    [&]<auto... I>(std::index_sequence<I...>) {
+        ([&]() {
+            result[I] = std::floor(ix / std::get<I>(strides));
+            ix -= result[I] * std::get<I>(strides);
+        }(), ...);
+    }(std::make_index_sequence<N>{});*/
+    GridDims result {};
+    for (std::size_t d = 0; d < N - 1; ++d) {
+        auto x = std::floor(ix / strides[d]);
+        result[d] = x;
+        ix -= x * strides[d];
+    }
+    result[N - 1] = ix;
+    return result;
+}
 
 }
 
-template<std::size_t Dims, typename T = std::array<std::uint32_t, Dims>>
+template<std::size_t DIMS, typename T = std::array<std::uint32_t, DIMS>>
 class Index {
-    static_assert(Dims > 0, "Dims has to be > 0");
+    static_assert(DIMS > 0, "Dims has to be > 0");
 public:
     using GridDims = T;
+    static constexpr std::size_t Dims = DIMS;
     /**
      * The value type, inherited from GridDims::value_type
      */
@@ -63,6 +84,10 @@ public:
      * Constructs an empty index object of specified dimensionality. Not of much use, really.
      */
     Index() : _size(), _cum_size(), n_elems(0) {}
+
+    Index(std::initializer_list<value_type> ilist) : Index(std::vector<value_type>{ilist}) {
+
+    }
 
     template<typename Shape>
     explicit Index(const Shape &size)
@@ -142,16 +167,7 @@ public:
      * @return
      */
     GridDims inverse(std::size_t idx) const {
-        GridDims result;
-        auto prefactor = n_elems / _size[0];
-        for (std::size_t d = 0; d < Dims - 1; ++d) {
-            auto x = std::floor(idx / prefactor);
-            result[d] = x;
-            idx -= x * prefactor;
-            prefactor /= _size[d + 1];
-        }
-        result[Dims - 1] = idx;
-        return result;
+        return detail::indexInverse<GridDims>(_cum_size, idx);
     }
 
 private:

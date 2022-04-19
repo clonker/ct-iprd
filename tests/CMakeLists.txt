@@ -11,7 +11,8 @@ set(TEST_SRC
         test_cuda.cu
         test_michaelis_menten.cpp
         test_forward_backward_map.cpp
-        test_prefix_sum_par.cpp)
+        test_prefix_sum_par.cpp
+        test_index.cpp)
 add_executable(tests catch_main.cpp ${TEST_SRC})
 set_target_properties(tests PROPERTIES CXX_VISIBILITY_PRESET hidden)
 

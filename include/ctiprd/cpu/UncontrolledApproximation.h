@@ -27,7 +27,7 @@ template<typename ParticleCollection, typename System, typename Generator=config
 struct UncontrolledApproximation {
     static constexpr std::size_t DIM = System::DIM;
     using dtype = typename System::dtype;
-    using NeighborList = nl::NeighborList<DIM, System::periodic, dtype>;
+    using NeighborList = nl::NeighborList<DIM, System::periodic, dtype, false>;
 
     using ReactionsO1 = typename System::ReactionsO1;
     using ReactionsO2 = typename System::ReactionsO2;
@@ -47,6 +47,15 @@ struct UncontrolledApproximation {
 
         std::tie(reactionsO1, backingO1) = reactions::impl::generateMapO1<Updater>(system);
         std::tie(reactionsO2, backingO2) = reactions::impl::generateMapO2<Updater>(system);
+
+        std::unordered_set<std::size_t> neighborListTypes {};
+        for(const auto &e : reactionsO2) {
+            if(!e.second.empty()) {
+                neighborListTypes.emplace(std::get<0>(e.first));
+                neighborListTypes.emplace(std::get<1>(e.first));
+            }
+        }
+        neighborList_->setTypes(neighborListTypes);
     }
 
     template<typename Pool>
@@ -60,11 +69,29 @@ struct UncontrolledApproximation {
         std::mutex mutex;
         std::vector<ReactionEvent> events;
         {
-            auto worker = [&system, tau, nl = neighborList_.get(), data = particles.get(), &events, &mutex](
+            auto worker = [this, &system, tau, nl = neighborList_.get(), data = particles.get(), &events, &mutex](
                     auto id, typename ParticleCollection::Position &pos, const typename ParticleCollection::ParticleType &type,
                     typename ParticleCollection::Force &force
             ) {
                 std::vector<ReactionEvent> localEvents;
+                const auto &reactions = reactionsO1[type];
+                for(std::size_t i = 0; i < reactions.size(); ++i) {
+                    if(reactions[i]->shouldPerform(tau, pos, type)) {
+                        localEvents.emplace_back(1, id, id, i);
+                    }
+                }
+
+                {
+                    std::scoped_lock lock{mutex};
+                    events.reserve(events.size() + localEvents.size());
+                    events.insert(end(events), begin(localEvents), end(localEvents));
+                }
+            };
+
+            particles->forEachParticle(worker, pool);
+
+            if constexpr(nReactionsO2 > 0) {
+                // pass
 
                 /*std::apply([&pos, &type, &localEvents, &tau, &id](auto &&... reaction) {
                     (
@@ -101,15 +128,7 @@ struct UncontrolledApproximation {
                         }, system.reactionsO2);
                     });
                 }*/
-
-                {
-                    std::scoped_lock lock{mutex};
-                    events.reserve(events.size() + localEvents.size());
-                    events.insert(end(events), begin(localEvents), end(localEvents));
-                }
-            };
-
-            particles->forEachParticle(worker, pool);
+            }
         }
         pool->waitForTasks();
 
