@@ -95,7 +95,7 @@ struct UncontrolledApproximation {
 
             if constexpr(nReactionsO2 > 0) {
                 auto that = this;
-                auto worker = [that, tau, &data = *particles](const auto &cellIndex) {
+                auto worker = [that, tau, &data = *particles, &mutex, &events](const auto &cellIndex) {
                     std::vector<ReactionEvent> localEvents;
 
                     that->neighborList_->forEachNeighborInCell([that, tau, &localEvents, &data](auto id1, auto id2) {
@@ -111,6 +111,12 @@ struct UncontrolledApproximation {
                             }
                         }
                     }, cellIndex);
+
+                    {
+                        std::scoped_lock lock{mutex};
+                        events.reserve(events.size() + localEvents.size());
+                        events.insert(end(events), begin(localEvents), end(localEvents));
+                    }
                 };
                 neighborList_->forEachCell(worker, pool);
             }
