@@ -87,32 +87,77 @@ public:
         return boxId;
     }
 
-    std::uint32_t cellNeighborsBegin(std::uint32_t cellIndex, auto dim) const {
+    template<typename T>
+    std::uint32_t cellNeighborsBegin(const T &cellIndex, auto dim) const {
         if constexpr(!periodic) {
-            // return gridPos[dim] >= nSubdivides ? (gridPos[i] - nSubdivides) : 0;
+            return cellIndex[dim] >= nSubdivides ? (cellIndex[dim] - nSubdivides) : 0;
         } else {
-
+            return cellIndex[dim] >= nSubdivides ? cellIndex[dim] - nSubdivides : (nCells[dim]  - cellIndex[dim]) % nCells[dim];
         }
     }
 
-    template<typename F, typename Pool, typename PoolPtr = config::PoolPtr<Pool>>
-    void forEachCell(F &&f, PoolPtr pool) {
-
+    template<typename T>
+    std::uint32_t cellNeighborsEnd(const T &cellIndex, auto dim) const {
+        if constexpr(!periodic) {
+            return cellIndex[dim] < nCells[dim] - nSubdivides ? (cellIndex[dim] + nSubdivides + 1) : nCells[dim];
+        } else {
+            return (cellIndex[dim] + nSubdivides + 1) % nCells[dim];
+        }
     }
+
+    template<typename F, typename PoolPtr>
+    void forEachCell(F &&f, PoolPtr pool) const {
+        auto worker = [op = std::forward<F>(f)](auto cellIndex) {
+            op(cellIndex);
+        };
+        auto nTotal = std::accumulate(begin(nCells), end(nCells), 1, std::multiplies<>());
+        for(decltype(nTotal) i = 0; i < nTotal; ++i) {
+            pool->push(worker, _index.inverse(i));
+        }
+    }
+
+    template<typename F>
+    void forEachNeighborInCell(F &&f, typename util::Index<DIM>::value_type cellIndex) const {
+        forEachNeighborInCell(std::forward<F>(f), _index.inverse(cellIndex));
+    }
+
+    template<typename F>
+    void forEachNeighborInCell(F &&f, const typename util::Index<DIM>::GridDims &cellIndex) const {
+        auto particleId = (*head.at(_index.index(cellIndex))).load();
+        while (particleId != 0) {
+
+            for(std::size_t d = 0; d < DIM; ++d) {
+                auto begin = cellNeighborsBegin(cellIndex, d);
+                auto end = cellNeighborsEnd(cellIndex, d);
+
+                auto cellPos = cellIndex;
+                for (auto k = begin; k != end; k = periodic ? (k + 1) % nCells[d] : k + 1) {
+                    cellPos[d] = k;
+
+                    auto neighborCellId = _index.index(cellPos);
+                    auto neighborId = (*head.at(neighborCellId)).load();
+                    while (neighborId != 0) {
+                        if(neighborId != particleId) {
+                            f(particleId, neighborId);
+                        }
+                        neighborId = list.at(neighborId);
+                    }
+                }
+            }
+
+            particleId = list.at(particleId);
+        }
+    }
+
+
 
     template<typename ParticleCollection, typename F>
     void forEachNeighbor(std::size_t id, ParticleCollection &collection, F &&fun) const {
         const auto &pos = collection.position(id);
         auto gridPos = this->gridPos(&pos[0]);
         for (int i = 0u; i < DIM; ++i) {
-            std::uint32_t begin, end;
-            if constexpr(!periodic) {
-                begin = gridPos[i] >= nSubdivides ? (gridPos[i] - nSubdivides) : 0;
-                end = gridPos[i] < nCells[i] - nSubdivides ? (gridPos[i] + nSubdivides + 1) : nCells[i];
-            } else {
-                begin = gridPos[i] >= nSubdivides ? gridPos[i] - nSubdivides : (nCells[i]  - gridPos[i]) % nCells[i];
-                end = (gridPos[i] + nSubdivides + 1) % nCells[i];
-            }
+            auto begin = cellNeighborsBegin(gridPos, i);
+            auto end = cellNeighborsEnd(gridPos, i);
 
             auto cellPos = gridPos;
             for (auto k = begin; k != end; k = periodic ? (k + 1) % nCells[i] : k + 1) {

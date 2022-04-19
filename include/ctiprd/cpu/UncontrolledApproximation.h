@@ -69,65 +69,50 @@ struct UncontrolledApproximation {
         std::mutex mutex;
         std::vector<ReactionEvent> events;
         {
-            auto worker = [this, &system, tau, nl = neighborList_.get(), data = particles.get(), &events, &mutex](
-                    auto id, typename ParticleCollection::Position &pos, const typename ParticleCollection::ParticleType &type,
-                    typename ParticleCollection::Force &force
-            ) {
-                std::vector<ReactionEvent> localEvents;
-                const auto &reactions = reactionsO1[type];
-                for(std::size_t i = 0; i < reactions.size(); ++i) {
-                    if(reactions[i]->shouldPerform(tau, pos, type)) {
-                        localEvents.emplace_back(1, id, id, i);
+            {
+                auto worker = [this, &system, tau, nl = neighborList_.get(), data = particles.get(), &events, &mutex](
+                        auto id, typename ParticleCollection::Position &pos,
+                        const typename ParticleCollection::ParticleType &type,
+                        typename ParticleCollection::Force &force
+                ) {
+                    std::vector<ReactionEvent> localEvents;
+                    const auto &reactions = reactionsO1[type];
+                    for (std::size_t i = 0; i < reactions.size(); ++i) {
+                        if (reactions[i]->shouldPerform(tau, pos, type)) {
+                            localEvents.emplace_back(1, id, id, i);
+                        }
                     }
-                }
 
-                {
-                    std::scoped_lock lock{mutex};
-                    events.reserve(events.size() + localEvents.size());
-                    events.insert(end(events), begin(localEvents), end(localEvents));
-                }
-            };
+                    {
+                        std::scoped_lock lock{mutex};
+                        events.reserve(events.size() + localEvents.size());
+                        events.insert(end(events), begin(localEvents), end(localEvents));
+                    }
+                };
 
-            particles->forEachParticle(worker, pool);
+                particles->forEachParticle(worker, pool);
+            }
 
             if constexpr(nReactionsO2 > 0) {
-                // pass
+                auto that = this;
+                auto worker = [that, tau, &data = *particles](const auto &cellIndex) {
+                    std::vector<ReactionEvent> localEvents;
 
-                /*std::apply([&pos, &type, &localEvents, &tau, &id](auto &&... reaction) {
-                    (
-                            ([&localEvents, &pos, &type, &tau, &id](const auto &r) {
-                                impl::ReactionImpl<std::decay_t<decltype(r)>> impl {&r};
-                                if (impl.shouldPerform(tau, pos, type)) {
-                                    localEvents.push_back(ReactionEvent<dtype, Updater>{
-                                            .id1 = id,
-                                            .id2 = id,
-                                            .perform = impl
-                                    });
-                                }
-                            }(reaction)),
-                            ...);
-                }, system.reactionsO1);
+                    that->neighborList_->forEachNeighborInCell([that, tau, &localEvents, &data](auto id1, auto id2) {
+                        auto type1 = data.typeOf(id1);
+                        auto type2 = data.typeOf(id2);
+                        const auto &p1 = data.positionOf(id1);
+                        const auto &p2 = data.positionOf(id2);
 
-                if constexpr(nReactionsO2 > 0) {
-                    nl->template forEachNeighbor(id, *data, [&](auto neighborId, const auto &neighborPos,
-                                                                const auto &neighborType,
-                                                                const auto &neighborForce) {
-                        std::apply([&](auto &&... reaction) {
-                            (
-                                    ([&](const auto &r) {
-                                        impl::ReactionImpl<std::decay_t<decltype(r)>> impl {&r};
-                                        if (impl.shouldPerform(tau, pos, type, neighborPos, neighborType)) {
-                                            localEvents.push_back(ReactionEvent<dtype, Updater>{
-                                                    .id1 = id,
-                                                    .id2 = neighborId,
-                                                    .perform = impl
-                                            });
-                                        }
-                                    }(reaction)),
-                                    ...);
-                        }, system.reactionsO2);
-                    });
-                }*/
+                        const auto &reactions = that->reactionsO2[{type1, type2}];
+                        for (std::size_t i = 0; i < reactions.size(); ++i) {
+                            if (reactions[i]->shouldPerform(tau, p1, type1, p2, type2)) {
+                                localEvents.emplace_back(2, id1, id2, i);
+                            }
+                        }
+                    }, cellIndex);
+                };
+                neighborList_->forEachCell(worker, pool);
             }
         }
         pool->waitForTasks();
