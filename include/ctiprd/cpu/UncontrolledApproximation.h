@@ -21,6 +21,7 @@ struct ReactionEvent {
     std::uint8_t nEducts;
     std::size_t id1, id2;
     std::size_t reactionIndex;
+    std::size_t type1, type2;
 };
 
 template<typename ParticleCollection, typename System, typename Generator=config::DefaultGenerator>
@@ -79,7 +80,7 @@ struct UncontrolledApproximation {
                     const auto &reactions = reactionsO1[type];
                     for (std::size_t i = 0; i < reactions.size(); ++i) {
                         if (reactions[i]->shouldPerform(tau, pos, type)) {
-                            localEvents.emplace_back(1, id, id, i);
+                            localEvents.emplace_back(1, id, 0, i, type, 0);
                         }
                     }
 
@@ -107,7 +108,7 @@ struct UncontrolledApproximation {
                         const auto &reactions = that->reactionsO2[{type1, type2}];
                         for (std::size_t i = 0; i < reactions.size(); ++i) {
                             if (reactions[i]->shouldPerform(tau, p1, type1, p2, type2)) {
-                                localEvents.emplace_back(2, id1, id2, i);
+                                localEvents.emplace_back(2, id1, id2, i, type1, type2);
                             }
                         }
                     }, cellIndex);
@@ -129,11 +130,10 @@ struct UncontrolledApproximation {
 
             for(auto it = begin(events); it != end(events); ++it) {
                 if(it->nEducts == 1) {
-                    (*reactionsO1[particles->typeOf(it->id1)][it->reactionIndex])(it->id1, *particles, updater);
+                    (*reactionsO1[it->type1][it->reactionIndex])(it->id1, *particles, updater);
                 } else {
-                    const auto &t1 = particles->typeOf(it->id1);
-                    const auto &t2 = particles->typeOf(it->id2);
-                    (*reactionsO2[{t1, t2}][it->reactionIndex])(it->id1, it->id2, *particles, updater);
+                    // spdlog::critical("Vector length {} for types ({},{}), requesting {}", reactionsO2[{t1, t2}].size(), t1, t2, it->reactionIndex);
+                    (*reactionsO2[{it->type1, it->type2}][it->reactionIndex])(it->id1, it->id2, *particles, updater);
                 }
             }
 
