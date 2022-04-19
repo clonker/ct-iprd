@@ -122,7 +122,13 @@ struct UncontrolledApproximation {
             Updater updater {*particles};
 
             for(auto it = begin(events); it != end(events); ++it) {
-                //(*it)(*particles, updater);
+                if(it->nEducts == 1) {
+                    (*reactionsO1[particles->typeOf(it->id1)][it->reactionIndex])(it->id1, *particles, updater);
+                } else {
+                    const auto &t1 = particles->typeOf(it->id1);
+                    const auto &t2 = particles->typeOf(it->id2);
+                    (*reactionsO2[{t1, t2}][it->reactionIndex])(it->id1, it->id2, *particles, updater);
+                }
             }
 
             particles->update(begin(updater.toAdd), end(updater.toAdd), begin(updater.toRemove), end(updater.toRemove));
