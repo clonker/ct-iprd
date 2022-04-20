@@ -122,7 +122,7 @@ public:
         forEachNeighborInCell(std::forward<F>(f), _index.inverse(cellIndex));
     }
 
-    template<typename F>
+    template<bool all, typename F>
     void forEachNeighborInCell(F &&f, const typename Index::GridDims &cellIndex) const {
         auto particleId = (*head.at(_index.index(cellIndex))).load();
         while (particleId != 0) {
@@ -138,8 +138,14 @@ public:
                     auto neighborCellId = _index.index(cellPos);
                     auto neighborId = (*head.at(neighborCellId)).load();
                     while (neighborId != 0) {
-                        if(neighborId != particleId) {
-                            f(particleId, neighborId);
+                        if constexpr(all) {
+                            if(neighborId != particleId) {
+                                f(particleId, neighborId);
+                            }
+                        } else {
+                            if (neighborId > particleId) {
+                                f(particleId, neighborId);
+                            }
                         }
                         neighborId = list.at(neighborId);
                     }

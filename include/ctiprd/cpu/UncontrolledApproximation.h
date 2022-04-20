@@ -99,18 +99,16 @@ struct UncontrolledApproximation {
                 auto worker = [that, tau, &data = *particles, &mutex, &events](const auto &cellIndex) {
                     std::vector<ReactionEvent> localEvents;
 
-                    that->neighborList_->forEachNeighborInCell([that, tau, &localEvents, &data](const auto &id1, const auto &id2) {
-                        if(id1 < id2) {
-                            auto type1 = data.typeOf(id1);
-                            auto type2 = data.typeOf(id2);
-                            const auto &p1 = data.positionOf(id1);
-                            const auto &p2 = data.positionOf(id2);
+                    that->neighborList_->template forEachNeighborInCell<false>([that, tau, &localEvents, &data](const auto &id1, const auto &id2) {
+                        auto type1 = data.typeOf(id1);
+                        auto type2 = data.typeOf(id2);
+                        const auto &p1 = data.positionOf(id1);
+                        const auto &p2 = data.positionOf(id2);
 
-                            const auto &reactions = that->reactionsO2[{type1, type2}];
-                            for (std::size_t i = 0; i < reactions.size(); ++i) {
-                                if (reactions[i]->shouldPerform(tau, p1, type1, p2, type2)) {
-                                    localEvents.emplace_back(2, id1, id2, i, type1, type2);
-                                }
+                        const auto &reactions = that->reactionsO2[{type1, type2}];
+                        for (std::size_t i = 0; i < reactions.size(); ++i) {
+                            if (reactions[i]->shouldPerform(tau, p1, type1, p2, type2)) {
+                                localEvents.emplace_back(2, id1, id2, i, type1, type2);
                             }
                         }
                     }, cellIndex);
