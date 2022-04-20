@@ -19,6 +19,7 @@ namespace ctiprd::cpu::nl {
 template<int DIM, bool periodic, typename dtype, bool allTypes=true>
 class NeighborList {
 public:
+    using Index = util::Index<DIM>;
     NeighborList(std::array<dtype, DIM> gridSize, dtype interactionRadius, int nSubdivides = 2)
             : _gridSize(gridSize), nSubdivides(nSubdivides) {
         for (int i = 0; i < DIM; ++i) {
@@ -26,7 +27,7 @@ public:
             if (gridSize[i] <= 0) throw std::invalid_argument("grid sizes must be positive.");
             nCells[i] = gridSize[i] / _cellSize[i];
         }
-        _index = util::Index<DIM>(nCells);
+        _index = Index(nCells);
         head.resize(_index.size());
     }
 
@@ -72,7 +73,7 @@ public:
         pool->waitForTasks();
     }
 
-    typename util::Index<DIM>::GridDims gridPos(const dtype *pos) const {
+    typename Index::GridDims gridPos(const dtype *pos) const {
         std::array<std::uint32_t, DIM> projections;
         for (auto i = 0u; i < DIM; ++i) {
             projections[i] = static_cast<std::uint32_t>(
@@ -117,12 +118,12 @@ public:
     }
 
     template<typename F>
-    void forEachNeighborInCell(F &&f, typename util::Index<DIM>::value_type cellIndex) const {
+    void forEachNeighborInCell(F &&f, typename Index::value_type cellIndex) const {
         forEachNeighborInCell(std::forward<F>(f), _index.inverse(cellIndex));
     }
 
     template<typename F>
-    void forEachNeighborInCell(F &&f, const typename util::Index<DIM>::GridDims &cellIndex) const {
+    void forEachNeighborInCell(F &&f, const typename Index::GridDims &cellIndex) const {
         auto particleId = (*head.at(_index.index(cellIndex))).load();
         while (particleId != 0) {
 
@@ -159,7 +160,7 @@ public:
             auto begin = cellNeighborsBegin(gridPos, i);
             auto end = cellNeighborsEnd(gridPos, i);
 
-            auto cellPos = gridPos;
+            typename Index::GridDims cellPos {gridPos};
             for (auto k = begin; k != end; k = periodic ? (k + 1) % nCells[i] : k + 1) {
                 cellPos[i] = k;
 

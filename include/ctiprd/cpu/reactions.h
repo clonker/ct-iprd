@@ -69,7 +69,7 @@ struct CPUReactionO1<Updater, ctiprd::reactions::doi::Decay<typename Updater::dt
         return detail::shouldPerformO1(tau, s1, t1, baseReaction);
     }
 
-    void operator()(std::size_t id, typename Updater::Particles &collection, Updater &updater) const {
+    void operator()(std::size_t id, typename Updater::Particles &collection, Updater &updater) const override {
         updater.remove(id, collection);
     }
 
@@ -88,7 +88,7 @@ struct CPUReactionO1<Updater, ctiprd::reactions::doi::Conversion<typename Update
         return detail::shouldPerformO1(tau, s1, t1, baseReaction);
     }
 
-    void operator()(std::size_t id, typename Updater::Particles &collection, Updater &updater) const {
+    void operator()(std::size_t id, typename Updater::Particles &collection, Updater &updater) const override {
         updater.directUpdate(id, baseReaction.productType, {}, collection);
     }
 
@@ -118,7 +118,7 @@ struct CPUReactionO1<Updater, ctiprd::reactions::doi::Fission<typename Updater::
         return dist(generator);
     }
 
-    void operator()(std::size_t id, typename Updater::Particles &collection, Updater &updater) const {
+    void operator()(std::size_t id, typename Updater::Particles &collection, Updater &updater) const override {
         const auto &c = collection.positionOf(id);
         State n {};
         std::transform(begin(n.data), end(n.data), begin(n.data), [](const auto &) {
@@ -155,7 +155,7 @@ struct CPUReactionO2<Updater, ctiprd::reactions::doi::Fusion<typename Updater::d
         return std::make_tuple(baseReaction.eductType1, baseReaction.eductType2);
     };
 
-    void operator()(std::size_t id1, std::size_t id2, typename Updater::Particles &collection, Updater &updater) const {
+    void operator()(std::size_t id1, std::size_t id2, typename Updater::Particles &collection, Updater &updater) const override {
         if (updater.claim(id1)) {
             if (updater.claim(id2)) {
                 auto w1 = collection.typeOf(id1) == baseReaction.eductType1 ? baseReaction.w1 : baseReaction.w2;
@@ -192,7 +192,7 @@ struct CPUReactionO2<Updater, ctiprd::reactions::doi::Catalysis<typename Updater
         return std::make_tuple(baseReaction.catalyst, baseReaction.eductType);
     };
 
-    void operator()(std::size_t id1, std::size_t id2, typename Updater::Particles &collection, Updater &updater) const {
+    void operator()(std::size_t id1, std::size_t id2, typename Updater::Particles &collection, Updater &updater) const override {
         if(collection.typeOf(id1) == baseReaction.catalyst) {
             updater.directUpdate(id2, baseReaction.productType, {}, collection);
         } else {
