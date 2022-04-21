@@ -27,7 +27,7 @@ static auto make_pool(int n) {
 
 template<typename Pool>
 auto threadGranularity(PoolPtr<Pool> pool) {
-    static auto res = pool->size();
+    static auto res = 4 * pool->size();
     return res;
 }
 
