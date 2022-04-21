@@ -391,9 +391,9 @@ struct ParticleCollectionUpdater {
 
     std::mutex addMutex, removeMutex;
 
-    void add(const ParticleType &type, Position &&position) {
+    void add(const ParticleType &type, Position &&position, ParticleCollection &collection) {
         util::pbc::wrapPBC<System>(position);
-        std::scoped_lock lock(addMutex);
+        // std::scoped_lock lock(addMutex);
         toAdd.emplace_back(std::move(position), type);
     }
 
@@ -402,11 +402,11 @@ struct ParticleCollectionUpdater {
         if constexpr(check) {
             bool expected{false};
             if (changed[index].compare_exchange_weak(expected, true)) {
-                std::scoped_lock lock(removeMutex);
+                // std::scoped_lock lock(removeMutex);
                 collection.removeParticle(index);
             }
         } else {
-            std::scoped_lock lock(removeMutex);
+            // std::scoped_lock lock(removeMutex);
             collection.removeParticle(index);
         }
     }
@@ -427,6 +427,77 @@ struct ParticleCollectionUpdater {
         if constexpr(check) {
             bool expected {false};
             if(changed[index].compare_exchange_weak(expected, true)) {
+                if(type) {
+                    collection.setType(index, *type);
+                }
+                if(position) {
+                    util::pbc::wrapPBC<System>(*position);
+                    collection.setPosition(index, *position);
+                }
+            }
+        } else {
+            if(type) {
+                collection.setType(index, *type);
+            }
+            if(position) {
+                util::pbc::wrapPBC<System>(*position);
+                collection.setPosition(index, *position);
+            }
+        }
+    }
+};
+
+template<typename System, typename ParticleCollection>
+struct SynchronizedParticleCollectionUpdater {
+    using Particles = ParticleCollection;
+    using ParticleType = typename ParticleCollection::ParticleType;
+    using Position = typename ParticleCollection::Position;
+    using State = Position;
+    using Index = typename ParticleCollection::size_type;
+    using dtype = typename Particles::dtype;
+    static constexpr int dim = Particles::dim;
+
+    explicit SynchronizedParticleCollectionUpdater(const ParticleCollection &collection) : changed(collection.size()) {}
+
+    std::vector<char> changed;
+
+    void add(const ParticleType &type, Position &&position, ParticleCollection &collection) {
+        util::pbc::wrapPBC<System>(position);
+        collection.addParticle(position, type);
+    }
+
+    template<bool check=true>
+    void remove(const Index &index, ParticleCollection &collection) {
+        if constexpr(check) {
+            if(!changed[index]) {
+                changed[index] = true;
+                collection.removeParticle(index);
+            }
+        } else {
+            collection.removeParticle(index);
+        }
+    }
+
+    bool claim(const Index &index) {
+        if(!changed[index]) {
+            changed[index] = true;
+            return true;
+        }
+        return false;
+    }
+
+    void release(const Index &index) {
+        changed[index] = false;
+    }
+
+    template<bool check=true>
+    void directUpdate(const Index &index, const std::optional<ParticleType> &type,
+                      std::optional<Position> &&position,
+                      ParticleCollection &collection) {
+        if constexpr(check) {
+            bool expected {false};
+            if(!changed[index]) {
+                changed[index] = true;
                 if(type) {
                     collection.setType(index, *type);
                 }

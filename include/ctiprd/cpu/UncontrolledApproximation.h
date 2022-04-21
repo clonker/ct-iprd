@@ -22,6 +22,7 @@ struct ReactionEvent {
     std::size_t id1, id2;
     std::size_t reactionIndex;
     std::size_t type1, type2;
+    bool valid {true};
 };
 
 template<typename ParticleCollection, typename System, typename Generator=config::DefaultGenerator>
@@ -33,7 +34,7 @@ struct UncontrolledApproximation {
     using ReactionsO1 = typename System::ReactionsO1;
     using ReactionsO2 = typename System::ReactionsO2;
 
-    using Updater = ParticleCollectionUpdater<System, ParticleCollection>;
+    using Updater = SynchronizedParticleCollectionUpdater<System, ParticleCollection>;
 
     static constexpr int nReactionsO1 = std::tuple_size_v<ReactionsO1>;
     static constexpr int nReactionsO2 = std::tuple_size_v<ReactionsO2>;
@@ -80,7 +81,7 @@ struct UncontrolledApproximation {
                     const auto &reactions = reactionsO1[type];
                     for (std::size_t i = 0; i < reactions.size(); ++i) {
                         if (reactions[i]->shouldPerform(tau, pos, type)) {
-                            localEvents.emplace_back(1, id, 0, i, type, 0);
+                            localEvents.emplace_back(1, id, id, i, type, 0);
                         }
                     }
 
@@ -129,15 +130,21 @@ struct UncontrolledApproximation {
             Updater updater {*particles};
 
             for(auto it = begin(events); it != end(events); ++it) {
-                if(it->nEducts == 1) {
-                    (*reactionsO1[it->type1][it->reactionIndex])(it->id1, *particles, updater);
-                } else {
-                    // spdlog::critical("Vector length {} for types ({},{}), requesting {}", reactionsO2[{t1, t2}].size(), t1, t2, it->reactionIndex);
-                    (*reactionsO2[{it->type1, it->type2}][it->reactionIndex])(it->id1, it->id2, *particles, updater);
+                if(it->valid) {
+                    if (it->nEducts == 1) {
+                        (*reactionsO1[it->type1][it->reactionIndex])(it->id1, *particles, updater);
+                    } else {
+                        (*reactionsO2[{it->type1, it->type2}][it->reactionIndex])(it->id1, it->id2, *particles, updater);
+                    }
+                    for (auto it2 = it + 1; it2 != end(events); ++it2) {
+                        if(it2->valid && (it->id1 == it2->id1 || it->id1 == it2->id2 || it->id2 == it2->id1 || it->id2 == it2->id2)) {
+                            it2->valid = false;
+                        }
+                    }
                 }
             }
 
-            particles->update(begin(updater.toAdd), end(updater.toAdd), begin(updater.toRemove), end(updater.toRemove));
+            // particles->update(begin(updater.toAdd), end(updater.toAdd), begin(updater.toRemove), end(updater.toRemove));
         }
     }
 

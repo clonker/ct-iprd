@@ -14,8 +14,8 @@ template<typename System, typename Position>
 void wrapPBC(Position &pos) {
     if constexpr(System::periodic) {
         for (int d = 0; d < System::DIM; ++d) {
-            if (pos[d] >= .5 * System::boxSize[d]) pos[d] -= System::boxSize[d];
-            if (pos[d] < -.5 * System::boxSize[d]) pos[d] += System::boxSize[d];
+            while (pos[d] >= .5 * System::boxSize[d]) pos[d] -= System::boxSize[d];
+            while (pos[d] < -.5 * System::boxSize[d]) pos[d] += System::boxSize[d];
         }
     }
 }
