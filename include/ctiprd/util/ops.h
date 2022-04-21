@@ -56,4 +56,14 @@ dtype length(const dtype *p) {
     return std::sqrt(l);
 }
 
+template<typename T>
+constexpr T factorial(T n) requires (std::is_integral_v<T>) {
+    return n <= 1 ? n : factorial(n - 1) * n;
+}
+
+template<typename T, typename K>
+constexpr T binomialCoefficient(T n, K k) requires (std::is_integral_v<T> && std::is_integral_v<K>) {
+    return factorial(n) / (factorial(k) * factorial(n - k));
+}
+
 }

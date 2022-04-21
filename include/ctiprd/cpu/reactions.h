@@ -13,6 +13,7 @@
 #include <spdlog/spdlog.h>
 #include <tsl/robin_map.h>
 
+#include <ctiprd/util/ops.h>
 #include <ctiprd/util/hash.h>
 #include <ctiprd/reactions/doi.h>
 
@@ -226,6 +227,7 @@ template<typename Updater, typename System>
 std::tuple<ReactionsO1Map<Updater>, ReactionsO1Backing<Updater>> generateMapO1(const System &system) {
     ReactionsO1Backing<Updater> backingData {};
     ReactionsO1Map<Updater> map;
+    map.reserve(System::types.size());
 
     {
         for (const auto &[name, _] : System::types) {
@@ -249,6 +251,7 @@ template<typename Updater, typename System>
 std::tuple<ReactionsO2Map<Updater>, ReactionsO2Backing<Updater>> generateMapO2(const System &system) {
     ReactionsO2Backing<Updater> backingData {};
     ReactionsO2Map<Updater> map;
+    map.reserve(ctiprd::util::binomialCoefficient(System::types.size(), 2));
 
     {
         for (const auto &[name1, d1] : System::types) {
