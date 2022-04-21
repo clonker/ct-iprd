@@ -29,13 +29,6 @@ struct ComputeIndex {
 
 template<typename GridDims, typename Strides, std::size_t N = std::tuple_size_v<Strides>>
 constexpr GridDims indexInverse(const Strides &strides, std::size_t ix) {
-    /*GridDims result {};
-    [&]<auto... I>(std::index_sequence<I...>) {
-        ([&]() {
-            result[I] = std::floor(ix / std::get<I>(strides));
-            ix -= result[I] * std::get<I>(strides);
-        }(), ...);
-    }(std::make_index_sequence<N>{});*/
     GridDims result {};
     for (std::size_t d = 0; d < N - 1; ++d) {
         auto x = std::floor(ix / strides[d]);
@@ -91,7 +84,7 @@ public:
 
     template<typename Shape>
     explicit Index(const Shape &size)
-            : _size(), n_elems(std::accumulate(begin(size), end(size), 1u, std::multiplies<value_type>())) {
+            : _size(), n_elems(std::accumulate(begin(size), end(size), static_cast<value_type>(1), std::multiplies<>())) {
         std::copy(begin(size), end(size), begin(_size));
 
         GridDims strides;
@@ -168,6 +161,10 @@ public:
      */
     GridDims inverse(std::size_t idx) const {
         return detail::indexInverse<GridDims>(_cum_size, idx);
+    }
+
+    const GridDims &dims() const {
+        return _size;
     }
 
 private:
