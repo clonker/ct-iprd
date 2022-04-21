@@ -10,9 +10,11 @@
 #include <list>
 #include <memory>
 
+#include <spdlog/spdlog.h>
+#include <tsl/robin_map.h>
+
 #include <ctiprd/util/hash.h>
 #include <ctiprd/reactions/doi.h>
-#include <spdlog/spdlog.h>
 
 namespace ctiprd::cpu::reactions::impl {
 
@@ -211,12 +213,12 @@ using EqO2 = ctiprd::util::hash::ForwardBackwardTupleEquality<KeyO2>;
 }
 
 template<typename Updater>
-using ReactionsO1Map = std::unordered_map<std::size_t, std::vector<const ReactionO1<Updater>*>>;
+using ReactionsO1Map = tsl::robin_map<std::size_t, std::vector<const ReactionO1<Updater>*>>;
 template<typename Updater>
 using ReactionsO1Backing = std::list<std::unique_ptr<ReactionO1<Updater>>>;
 
 template<typename Updater>
-using ReactionsO2Map = std::unordered_map<detail::KeyO2, std::vector<const ReactionO2<Updater>*>, detail::HasherO2, detail::EqO2>;
+using ReactionsO2Map = tsl::robin_map<detail::KeyO2, std::vector<const ReactionO2<Updater>*>, detail::HasherO2, detail::EqO2>;
 template<typename Updater>
 using ReactionsO2Backing = std::list<std::unique_ptr<ReactionO2<Updater>>>;
 
