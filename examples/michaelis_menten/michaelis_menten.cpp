@@ -38,7 +38,7 @@ PYBIND11_MODULE(mm_mod, m) {
         {
             py::gil_scoped_release release;
             for (std::size_t t = 0; t < nSteps; ++t) {
-                {
+                if (t % 100 == 0){
                     std::atomic<std::size_t> nEl {0};
                     std::atomic<std::size_t> nSl {0};
                     std::atomic<std::size_t> nESl {0};
