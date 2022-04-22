@@ -140,11 +140,11 @@ struct UncontrolledApproximation {
                     } else {
                         (*reactionsO2[{it->type1, it->type2}][it->reactionIndex])(it->id1, it->id2, *particles, updater);
                     }
-                    /*for (auto it2 = it + 1; it2 != end(events); ++it2) {
+                    for (auto it2 = it + 1; it2 != end(events); ++it2) {
                         if(it2->valid && (it->id1 == it2->id1 || it->id1 == it2->id2 || it->id2 == it2->id1 || it->id2 == it2->id2)) {
                             it2->valid = false;
                         }
-                    }*/
+                    }
                 }
             }
 
