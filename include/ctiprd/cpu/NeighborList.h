@@ -194,11 +194,19 @@ public:
 
     template<typename F, typename PoolPtr>
     void forEachCell(F &&f, PoolPtr pool) const {
-        auto worker = [op = std::forward<F>(f)](auto cellIndex) {
-            op(cellIndex);
+        auto worker = [op = std::forward<F>(f)](auto begin, auto end) {
+            for(auto i = begin; i != end; ++i) {
+                op(i);
+            }
         };
-        for(typename Index::value_type i = 0; i < nCellsTotal(); ++i) {
-            pool->push(worker, i);
+        auto granularity = config::threadGranularity(pool);
+        auto grainSize = nCellsTotal() / granularity;
+        std::size_t i {};
+        for (i = 0; i < granularity - 1; ++i) {
+            pool->push(worker, i*grainSize, (i+1) * grainSize);
+        }
+        if(i*grainSize != nCellsTotal()) {
+            pool->push(worker, i*grainSize, nCellsTotal());
         }
     }
 
