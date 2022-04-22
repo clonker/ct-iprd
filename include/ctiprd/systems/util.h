@@ -20,4 +20,9 @@ static constexpr std::size_t particleTypeId(std::string_view name) {
     return i;
 }
 
+template<typename System>
+struct SystemInfo {
+
+};
+
 }

@@ -22,12 +22,6 @@ struct variadic_first {
 
 }
 
-template<class T>
-constexpr const T &clamp(const T &v, const T &lo, const T &hi) {
-    assert(hi >= lo);
-    return (v < lo) ? lo : (hi < v) ? hi : v;
-}
-
 template<typename Iterator>
 auto euclideanDistance(Iterator beginFirst, Iterator endFirst, Iterator beginSecond) {
     using dtype = typename std::iterator_traits<Iterator>::value_type;
