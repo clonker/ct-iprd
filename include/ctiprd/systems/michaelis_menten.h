@@ -19,7 +19,8 @@ template<typename T>
 struct MichaelisMenten {
     using dtype = T;
     static constexpr std::size_t DIM = 3;
-    static constexpr std::array<T, DIM> boxSize{.3, .3, .3};
+    // static constexpr std::array<T, DIM> boxSize{.3, .3, .3};
+    static constexpr std::array<T, DIM> boxSize{4.4964,4.4964,4.4964};
     static constexpr bool periodic = true;
     static constexpr T kBT = 2.43614;
     static constexpr ctiprd::ParticleTypes<dtype, 4> types{{
