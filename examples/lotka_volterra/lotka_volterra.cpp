@@ -28,21 +28,10 @@ PYBIND11_MODULE(lv_mod, m) {
         System system {};
         auto pool = ctiprd::config::make_pool(njobs);
         auto integrator = ctiprd::cpu::integrator::EulerMaruyama{system, pool};
-
-        {
-            auto &generator = ctiprd::rnd::staticThreadLocalGenerator();
-            std::uniform_real_distribution<float> d1 {-System::boxSize[0] / 2, System::boxSize[0] / 2};
-            std::uniform_real_distribution<float> d2 {-System::boxSize[1] / 2, System::boxSize[1] / 2};
-            for (int n = 0; n < nPrey; ++n) {
-                integrator.particles()->addParticle({{d1(generator), d2(generator)}}, "prey");
-            }
-            for (int n = 0; n < nPredator; ++n) {
-                integrator.particles()->addParticle({{d1(generator), d2(generator)}}, "predator");
-            }
-        }
+        integrator.particles()->initializeParticles(nPrey, "prey");
+        integrator.particles()->initializeParticles(nPredator, "predator");
 
         std::vector<std::tuple<np_array<float>, np_array<std::size_t>>> trajectory;
-
         {
             py::gil_scoped_release release;
             for (std::size_t t = 0; t < nSteps; ++t) {
