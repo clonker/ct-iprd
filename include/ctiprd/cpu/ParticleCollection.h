@@ -216,6 +216,24 @@ public:
     }
 
     void sort() {
+        std::sort(begin(blanks), end(blanks));
+        std::size_t nSwapped {0};
+        for(std::size_t i = size() - 1; i >= size() - 1 - blanks.size(); --i) {
+            if(exists(i)) {
+                // swap with nSwapped-th blank
+                auto blank = blanks[nSwapped];
+                std::swap(positions_[i], positions_[blank]);
+                std::swap(particleTypes_[i], particleTypes_[blank]);
+                if constexpr(containsForces()) {
+                    std::swap(forces_[i], forces_[blank]);
+                }
+                if constexpr(containsVelocities()) {
+                    std::swap(velocities_[i], velocities_[blank]);
+                }
+                blanks[nSwapped] = i;
+                ++nSwapped;
+            }
+        }
     }
 
     template<typename F, typename Pool>
