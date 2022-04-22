@@ -18,10 +18,10 @@
 namespace ctiprd::cpu {
 
 struct ReactionEvent {
-    std::uint8_t nEducts;
-    std::size_t id1, id2;
-    std::size_t reactionIndex;
-    std::size_t type1, type2;
+    std::uint8_t nEducts {};
+    std::size_t id1 {}, id2 {};
+    std::size_t reactionIndex {};
+    std::size_t type1 {}, type2 {};
     bool valid {true};
 };
 

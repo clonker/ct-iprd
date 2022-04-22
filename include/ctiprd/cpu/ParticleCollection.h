@@ -215,6 +215,9 @@ public:
         return positions_[ix].has_value();
     }
 
+    void sort() {
+    }
+
     template<typename F, typename Pool>
     std::vector<std::future<void>> forEachParticle(F &&op, config::PoolPtr<Pool> pool) {
         std::vector<std::future<void>> futures;

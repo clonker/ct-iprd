@@ -1,10 +1,38 @@
 #include <set>
 
 #include <catch2/catch.hpp>
+#include <spdlog/spdlog.h>
 
 #include <ctiprd/systems/double_well.h>
 #include <ctiprd/systems/michaelis_menten.h>
 #include <ctiprd/cpu/integrators/EulerMaruyama.h>
+#include <ctiprd/cpu/ContainerContainer.h>
+
+TEST_CASE("container container iterator", "[cc]") {
+    std::vector<int> v1 {5, 4, 3, 2, 1};
+    std::vector<std::string> v2 {"1", "2", "3", "4", "5"};
+    std::vector<char> v3 {true, false, true, false, true};
+    using It = ctiprd::cpu::ContainerContainerIterator<std::vector<int>, std::vector<std::string>, std::vector<char>>;
+
+    It b {
+        .innerIterators = {begin(v1), begin(v2), begin(v3)}
+    };
+
+    It e {
+        .innerIterators = {end(v1), end(v2), end(v3)}
+    };
+
+    /*std::sort(b, e, [](const auto &elem1, const auto &elem2) {
+        return std::get<0>(elem1) < std::get<0>(elem2);
+    });*/
+
+    // REQUIRE(std::random_access_iterator<It>);
+    for(auto it = b; it != e; ++it) {
+        const auto &[val1, val2, val3] = *it;
+        spdlog::error("Got {} {} {}", std::to_string(val1), val2, std::to_string(val3));
+    }
+    REQUIRE(true);
+}
 
 TEST_CASE("Particle collection sanity", "[particles]") {
     using System = ctiprd::systems::DoubleWell<float>;
