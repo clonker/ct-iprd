@@ -64,6 +64,8 @@ struct UncontrolledApproximation {
     void reactions(const System &system, dtype tau, std::shared_ptr<ParticleCollection> particles,
                    std::shared_ptr<Pool> pool) {
 
+        std::vector<std::future<void>> futures;
+
         if constexpr(nReactionsO2 > 0) {
             neighborList_->update(particles, pool);
         }
@@ -92,7 +94,8 @@ struct UncontrolledApproximation {
                     }
                 };
 
-                particles->forEachParticle(worker, pool);
+                auto f = particles->forEachParticle(worker, pool);
+                std::move(begin(f), end(f), std::back_inserter(futures));
             }
 
             if constexpr(nReactionsO2 > 0) {
@@ -120,10 +123,11 @@ struct UncontrolledApproximation {
                         events.insert(end(events), begin(localEvents), end(localEvents));
                     }
                 };
-                neighborList_->forEachCell(worker, pool);
+                auto f = neighborList_->forEachCell(worker, pool);
+                std::move(begin(f), end(f), std::back_inserter(futures));
             }
         }
-        pool->waitForTasks();
+        for (auto &f : futures) f.wait();
 
         {
             std::shuffle(begin(events), end(events), rnd::staticThreadLocalGenerator<Generator>());

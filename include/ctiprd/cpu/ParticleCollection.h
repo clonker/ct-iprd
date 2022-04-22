@@ -215,15 +215,12 @@ public:
         return positions_[ix].has_value();
     }
 
-    template<typename F, typename Pool,
-            typename R=std::invoke_result_t<std::decay_t<F>, std::size_t, Position&, ParticleType, Force&>,
-            typename = std::enable_if_t<std::is_void_v<R>>>
+    template<typename F, typename Pool>
     std::vector<std::future<void>> forEachParticle(F &&op, config::PoolPtr<Pool> pool) {
         std::vector<std::future<void>> futures;
         auto granularity = config::threadGranularity(pool);
         futures.reserve(granularity);
 
-        // detail::Loop<Info, F> loop {op};
         auto loop = [operation = std::forward<F>(op)](
                 auto startIndex,
                 const auto &beginPositions, const auto &endPositions,
@@ -261,8 +258,7 @@ public:
         std::size_t beginIx = 0;
         for (std::size_t i = 0; i < granularity - 1; ++i) {
             if (itPos != positions_.end()) {
-                //futures.push_back(pool->push(loop, beginIx, grainSize, itPos, itTypes, itForces));
-                futures.push_back(pool->push(loop, beginIx, itPos, itPos + grainSize, itTypes, itForces, itVelocities));
+                futures.emplace_back(pool->push(loop, beginIx, itPos, itPos + grainSize, itTypes, itForces, itVelocities));
             }
             beginIx += grainSize;
             itPos += grainSize;
@@ -275,75 +271,7 @@ public:
             }
         }
         if (itPos != positions_.end()) {
-            //futures.push_back(pool->push(loop, beginIx, std::distance(itPos, end(positions_)), itPos, itTypes, itForces));
-            futures.push_back(pool->push(loop, beginIx, itPos, end(positions_), itTypes, itForces, itVelocities));
-        }
-
-        return std::move(futures);
-    }
-
-    template<typename F, typename Pool,
-            typename R=std::invoke_result_t<std::decay_t<F>, std::size_t, Position&, ParticleType, Force&>,
-            typename = std::enable_if_t<!std::is_void_v<R>>>
-    std::vector<std::future<std::vector<R>>> forEachParticle(F &&op, config::PoolPtr<Pool> pool) {
-        std::vector<std::future<std::vector<R>>> futures;
-        auto granularity = config::threadGranularity(pool);
-        futures.reserve(granularity);
-
-        auto loop = [operation = std::forward<F>(op)](
-                auto startIndex,
-                const auto &beginPositions, const auto &endPositions,
-                auto itTypes, auto itForces, auto itVelocities
-        ) {
-            std::vector<R> result;
-            result.reserve(std::distance(beginPositions, endPositions));
-            for (auto itPos = beginPositions; itPos != endPositions; ++itPos, ++startIndex, ++itTypes) {
-                if (*itPos) {
-                    if constexpr(containsForces() && containsVelocities()) {
-                        result.push_back(operation(startIndex, **itPos, *itTypes, *itForces, *itVelocities));
-                    } else if constexpr(containsForces() && !containsVelocities()) {
-                        result.push_back(operation(startIndex, **itPos, *itTypes, *itForces));
-                    } else if constexpr(!containsForces() && containsVelocities()) {
-                        result.push_back(operation(startIndex, **itPos, *itTypes, +itVelocities));
-                    } else {
-                        result.push_back(operation(startIndex, **itPos, *itTypes));
-                    }
-                }
-
-                if constexpr(containsForces()) {
-                    ++itForces;
-                }
-                if constexpr(containsVelocities()) {
-                    ++itVelocities;
-                }
-            }
-            return result;
-        };
-
-        auto n = size();
-        auto grainSize = n / granularity;
-        auto itPos = positions_.begin();
-        auto itTypes = particleTypes_.begin();
-        auto itForces = forces_.begin();
-        auto itVelocities = velocities_.begin();
-
-        std::size_t beginIx = 0;
-        for (std::size_t i = 0; i < granularity - 1; ++i) {
-            if (itPos != positions_.end()) {
-                futures.push_back(pool->push(loop, beginIx, itPos, itPos + grainSize, itTypes, itForces, itVelocities));
-            }
-            beginIx += grainSize;
-            itPos += grainSize;
-            itTypes += grainSize;
-            if constexpr(containsForces()) {
-                itForces += grainSize;
-            }
-            if constexpr(containsVelocities()) {
-                itVelocities += grainSize;
-            }
-        }
-        if (itPos != positions_.end()) {
-            futures.push_back(pool->push(loop, beginIx, itPos, positions_.end(), itTypes, itForces, itVelocities));
+            futures.emplace_back(pool->push(loop, beginIx, itPos, end(positions_), itTypes, itForces, itVelocities));
         }
 
         return std::move(futures);

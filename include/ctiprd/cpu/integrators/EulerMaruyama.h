@@ -62,8 +62,10 @@ public:
             util::pbc::wrapPBC<System>(pos);
         };
 
-        particles_->forEachParticle(worker, pool_);
-        pool_->waitForTasks();
+        auto futures = particles_->forEachParticle(worker, pool_);
+        for(auto &future : futures) {
+            future.wait();
+        }
 
         reactions->reactions(system, h, particles_, pool_);
     }

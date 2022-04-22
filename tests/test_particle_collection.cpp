@@ -50,7 +50,7 @@ SCENARIO("Particle collection can have different flags") {
                     f[0] = 11;
                     f[1] = -11;
                 }, pool);
-                pool->waitForTasks();
+                for(auto &future : futures) future.wait();
 
                 THEN("This modification is reflected in the data") {
                     Collection::ContainerType<Collection::MaybePosition> vecRef (1000, {{55, 22}});
@@ -108,9 +108,8 @@ TEST_CASE("Test against michaelis menten", "[particles][michaelis-menten]") {
     std::atomic<std::size_t> nES {0};
     std::atomic<std::size_t> nP {0};
     {
-        integrator.particles()->forEachParticle([&nE, &nS, &nES, &nP](const auto &id, const auto &, const auto &type,
-                                                                          const auto &) {
-
+        auto futures = integrator.particles()->forEachParticle([&nE, &nS, &nES, &nP](const auto &id, const auto &, const auto &type,
+                                                                                     const auto &) {
             if(type == System::eId) {
                 ++nE;
             } else if(type == System::sId) {
@@ -121,7 +120,7 @@ TEST_CASE("Test against michaelis menten", "[particles][michaelis-menten]") {
                 ++nP;
             }
         }, pool);
-        pool->waitForTasks();
+        for(auto &future : futures) future.wait();
     }
     REQUIRE(nE.load() == nEinit);
     REQUIRE(nS.load() == nSinit);

@@ -73,9 +73,9 @@ struct ForceField {
                     });
                 }
             };
-            particles->forEachParticle(worker, pool);
+            auto futures = particles->forEachParticle(worker, pool);
             if (wait) {
-                pool->waitForTasks();
+                for(auto &f : futures) f.wait();
             }
         }
     }

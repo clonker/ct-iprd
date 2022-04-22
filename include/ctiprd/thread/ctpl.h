@@ -19,6 +19,7 @@
 #pragma once
 
 #include <functional>
+#include <memory>
 #include <thread>
 #include <atomic>
 #include <vector>
@@ -71,7 +72,12 @@ class thread_pool {
 public:
 
     thread_pool() { this->init(); }
-    thread_pool(int nThreads) { this->init(); this->resize(nThreads); }
+    explicit thread_pool(int nThreads) { this->init(); this->resize(nThreads); }
+
+    thread_pool(const thread_pool &) = delete;
+    thread_pool(thread_pool &&) noexcept = delete;
+    thread_pool & operator=(const thread_pool &) = delete;
+    thread_pool & operator=(thread_pool &&) noexcept = delete;
 
     // the destructor waits for all the functions in the queue to be finished
     ~thread_pool() {
@@ -146,8 +152,7 @@ public:
                 *this->flags[i] = true;  // command the threads to stop
             }
             this->clear_queue();  // empty the queue
-        }
-        else {
+        } else {
             if (this->isDone || this->isStop)
                 return;
             this->isDone = true;  // give the waiting threads a command to finish
@@ -156,9 +161,10 @@ public:
             std::unique_lock<std::mutex> lock(this->mutex);
             this->cv.notify_all();  // stop all waiting threads
         }
-        for (int i = 0; i < static_cast<int>(this->threads.size()); ++i) {  // wait for the computing threads to finish
-            if (this->threads[i]->joinable())
-                this->threads[i]->join();
+        for (auto &thread : this->threads) {  // wait for the computing threads to finish
+            if (thread->joinable()) {
+                thread->join();
+            }
         }
         // if there were no threads in the pool but some functors in the queue, the functors are not deleted by the threads
         // therefore delete them here
@@ -170,7 +176,7 @@ public:
     template<typename F, typename... Rest>
     auto push(F && f, Rest&&... rest) ->std::future<decltype(f(rest...))> {
         auto pck = std::make_shared<std::packaged_task<decltype(f(rest...))()>>(
-                std::bind(std::forward<F>(f), std::placeholders::_1, std::forward<Rest>(rest)...)
+                std::bind(std::forward<F>(f), std::forward<Rest>(rest)...)
         );
         auto _f = new std::function<void()>([pck]() {
             (*pck)();
@@ -198,12 +204,6 @@ public:
 
 private:
 
-    // deleted
-    thread_pool(const thread_pool &);// = delete;
-    thread_pool(thread_pool &&);// = delete;
-    thread_pool & operator=(const thread_pool &);// = delete;
-    thread_pool & operator=(thread_pool &&);// = delete;
-
     void set_thread(int i) {
         std::shared_ptr<std::atomic<bool>> flag(this->flags[i]); // a copy of the shared ptr to the flag
         auto f = [this, i, flag/* a copy of the shared ptr to the flag */]() {
@@ -228,7 +228,7 @@ private:
                     return;  // if the queue is empty and this->isDone == true or *flag then return
             }
         };
-        this->threads[i].reset(new std::thread(f)); // compiler may not support std::make_unique()
+        this->threads[i] = std::make_unique<std::thread>(f); // compiler may not support std::make_unique()
     }
 
     void init() { this->nWaiting = 0; this->isStop = false; this->isDone = false; }

@@ -154,8 +154,8 @@ public:
             }
         };
 
-        collection->forEachParticle(updateOp, pool);
-        pool->waitForTasks();
+        auto futures = collection->forEachParticle(updateOp, pool);
+        for(const auto &f : futures) f.wait();
     }
 
     typename Index::GridDims gridPos(const dtype *pos) const {
@@ -193,7 +193,8 @@ public:
     }
 
     template<typename F, typename PoolPtr>
-    void forEachCell(F &&f, PoolPtr pool) const {
+    std::vector<std::future<void>> forEachCell(F &&f, PoolPtr pool) const {
+        std::vector<std::future<void>> futures;
         auto worker = [op = std::forward<F>(f)](auto begin, auto end) {
             for(auto i = begin; i != end; ++i) {
                 op(i);
@@ -203,11 +204,12 @@ public:
         auto grainSize = nCellsTotal() / granularity;
         std::size_t i {};
         for (i = 0; i < granularity - 1; ++i) {
-            pool->push(worker, i*grainSize, (i+1) * grainSize);
+            futures.emplace_back(pool->push(worker, i*grainSize, (i+1) * grainSize));
         }
         if(i*grainSize != nCellsTotal()) {
-            pool->push(worker, i*grainSize, nCellsTotal());
+            futures.emplace_back(pool->push(worker, i*grainSize, nCellsTotal()));
         }
+        return futures;
     }
 
     auto nCellsTotal() const {
