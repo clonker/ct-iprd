@@ -43,7 +43,7 @@ PYBIND11_MODULE(mm_mod, m) {
                     std::atomic<std::size_t> nSl {0};
                     std::atomic<std::size_t> nESl {0};
                     std::atomic<std::size_t> nPl {0};
-                    integrator.particles()->forEachParticle([&nEl, &nSl, &nESl, &nPl](const auto &id, const auto &, const auto &type,
+                    auto futures = integrator.particles()->forEachParticle([&nEl, &nSl, &nESl, &nPl](const auto &id, const auto &, const auto &type,
                                                                                   const auto &) {
                         if(type == System::eId) {
                             ++nEl;
@@ -55,7 +55,7 @@ PYBIND11_MODULE(mm_mod, m) {
                             ++nPl;
                         }
                     }, pool);
-                    pool->waitForTasks();
+                    for(auto &f : futures) f.wait();
 
                     nE.emplace_back(nEl.load());
                     nS.emplace_back(nSl.load());
