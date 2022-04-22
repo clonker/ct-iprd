@@ -52,7 +52,7 @@ dtype length(const dtype *p) {
 
 template<typename T>
 constexpr T factorial(T n) requires (std::is_integral_v<T>) {
-    return n <= 1 ? n : factorial(n - 1) * n;
+    return n <= 1 ? 1 : factorial(n - 1) * n;
 }
 
 template<typename T, typename K>
