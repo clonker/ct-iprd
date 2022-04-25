@@ -218,17 +218,18 @@ public:
     void sort() {
         std::sort(begin(blanks), end(blanks));
         std::size_t nSwapped {0};
-        for(std::size_t i = size() - 1; i >= size() - 1 - blanks.size(); --i) {
+        for(std::size_t i = size() - 1; i > size() - 1 - blanks.size(); --i) {
             if(exists(i)) {
                 // swap with nSwapped-th blank
                 auto blank = blanks[nSwapped];
-                std::swap(positions_[i], positions_[blank]);
-                std::swap(particleTypes_[i], particleTypes_[blank]);
+                positions_[blank] = positions_[i];
+                positions_[i].reset();
+                particleTypes_[blank] = particleTypes_[i];
                 if constexpr(containsForces()) {
-                    std::swap(forces_[i], forces_[blank]);
+                    forces_[blank] = forces_[i];
                 }
                 if constexpr(containsVelocities()) {
-                    std::swap(velocities_[i], velocities_[blank]);
+                    velocities_[blank] = velocities_[i];
                 }
                 blanks[nSwapped] = i;
                 ++nSwapped;
