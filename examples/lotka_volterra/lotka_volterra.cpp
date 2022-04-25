@@ -65,15 +65,6 @@ PYBIND11_MODULE(lv_mod, m) {
                     py::gil_scoped_acquire acquire;
 
                     auto nParticles = integrator.particles()->size();
-                    auto* ptrTraj = new float[2 * nParticles];
-                    auto* ptrTypes = new std::size_t[nParticles];
-                    py::capsule deleterTraj(ptrTraj, [](void *data) {
-                        delete[] (float *) data;
-                    });
-                    py::capsule deleterTypes(ptrTypes, [](void *data) {
-                        delete[] (std::size_t *) data;
-                    });
-
                     std::size_t shapeTraj[2] = {nParticles, 2};
                     std::size_t shapeTypes[1] = {nParticles};
                     trajectory.emplace_back(np_array<float>{shapeTraj}, np_array<std::size_t>{shapeTypes});
