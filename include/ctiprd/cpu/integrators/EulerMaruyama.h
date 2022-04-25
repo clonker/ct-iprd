@@ -28,9 +28,8 @@ template<typename System, typename Pool = config::ThreadPool, typename Generator
          typename Reactions = UncontrolledApproximation<ParticleCollection, System, Generator>>
 class EulerMaruyama {
 public:
-    static constexpr std::size_t DIM = System::DIM;
+    using Info = systems::SystemInfo<System>;
     using Particles = ParticleCollection;
-    using dtype = typename System::dtype;
 
     static constexpr const char *name = "EulerMaruyama";
 
@@ -48,17 +47,23 @@ public:
 
     void step(double h) {
 
-        forceField->forces(particles_, pool_);
+        if(prevIntegrationStep != h) {
+            prevIntegrationStep = h;
 
-        auto worker = [h, &data = *particles_ ]
-                (auto id, typename Particles::Position &pos, const typename Particles::ParticleType &type,
-                 typename Particles::Force &force) {
+            for(auto i = 0; i < Info::nTypes; ++i) {
+                randomDisplacementPrefactors[i] = std::sqrt(2 * Info::diffusionConstantOf(i) * h);
+                deterministicDisplacementPrefactors[i] = Info::diffusionConstantOf(i) * h / System::kBT;
+            }
+        }
 
-            const auto &diffusionConstant = System::types[type].diffusionConstant;
-            auto deterministicDisplacement = force * diffusionConstant * h / System::kBT;
-            auto randomDisplacement = noise() * std::sqrt(2 * diffusionConstant * h);
-            pos += deterministicDisplacement + randomDisplacement;
+        if constexpr(Info::hasForces()) {
+            forceField->forces(particles_, pool_);
+        }
 
+        auto worker = [this]
+                (const auto &, typename Particles::Position &pos, const typename Particles::ParticleType &type,
+                 const typename Particles::Force &force) {
+            pos += force * deterministicDisplacementPrefactors[type] + noise() * randomDisplacementPrefactors[type];
             util::pbc::wrapPBC<System>(pos);
         };
 
@@ -67,23 +72,24 @@ public:
             future.wait();
         }
 
-        reactions->reactions(system, h, particles_, pool_);
+        if constexpr(Info::hasReactions()) {
+            reactions->reactions(system, h, particles_, pool_);
 
-        if constexpr(Reactions::nReactionsO1 > 0 || Reactions::nReactionsO2 > 0) {
-            particles_->forEachParticle([](const auto &, auto &pos, const auto &, const auto &) {
-                util::pbc::wrapPBC<System>(pos);
-            }, pool_);
+            if constexpr(Info::periodic) {
+                auto fut = particles_->forEachParticle([](const auto &, auto &pos, const auto &, const auto &) {
+                    util::pbc::wrapPBC<System>(pos);
+                }, pool_);
+                for(auto &f : fut) f.wait();
+            }
         }
     }
-
-
 
 private:
 
     static typename Particles::Position noise() {
         typename Particles::Position out;
         std::generate(begin(out.data), end(out.data), []() {
-            return detail::normalDistribution<dtype>()(rnd::staticThreadLocalGenerator<Generator>());
+            return detail::normalDistribution<typename Info::dtype>()(rnd::staticThreadLocalGenerator<Generator>());
         });
         return out;
     }
@@ -91,6 +97,9 @@ private:
     std::shared_ptr<Particles> particles_;
     std::unique_ptr<ForceField> forceField;
     std::unique_ptr<Reactions> reactions;
+    std::array<typename Info::dtype, Info::nTypes> randomDisplacementPrefactors {};
+    std::array<typename Info::dtype, Info::nTypes> deterministicDisplacementPrefactors {};
+    typename Info::dtype prevIntegrationStep {0};
     config::PoolPtr<Pool> pool_;
     System system;
 };
