@@ -98,6 +98,7 @@ PYBIND11_MODULE(lv_mod, m) {
             }
         }
 
+        pool->stop();
         return trajectory;
     });
 }
