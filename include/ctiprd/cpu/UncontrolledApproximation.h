@@ -148,7 +148,6 @@ struct UncontrolledApproximation {
                 }
             }
 
-            // particles->update(begin(updater.toAdd), end(updater.toAdd), begin(updater.toRemove), end(updater.toRemove));
         }
         if constexpr(nReactionsO2 > 0) {
             particles->sort();

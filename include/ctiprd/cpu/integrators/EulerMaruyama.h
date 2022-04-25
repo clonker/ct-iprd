@@ -68,6 +68,12 @@ public:
         }
 
         reactions->reactions(system, h, particles_, pool_);
+
+        if constexpr(Reactions::nReactionsO1 > 0 || Reactions::nReactionsO2 > 0) {
+            particles_->forEachParticle([](const auto &, auto &pos, const auto &, const auto &) {
+                util::pbc::wrapPBC<System>(pos);
+            }, pool_);
+        }
     }
 
 
