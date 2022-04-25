@@ -13,8 +13,22 @@ TEMPLATE_TEST_CASE("Test Integration", "[integration]", ctiprd::systems::DoubleW
     TestType system {};
     auto pool = ctiprd::config::make_pool(6);
     auto integrator = ctiprd::cpu::integrator::EulerMaruyama{system, pool};
-    integrator.particles()->initializeParticles(25000, system.types[0].name);
+
+    {
+        auto &generator = ctiprd::rnd::staticThreadLocalGenerator();
+        for(std::size_t i = 0; i < 10000; ++i) {
+            ctiprd::Vec<float, 2> pos {};
+            for (std::size_t d = 0; d < 2; ++d) {
+                std::uniform_real_distribution<float> dist {-TestType::boxSize[d], TestType::boxSize[d]};
+                pos[d] = dist(generator);
+            }
+
+            integrator.particles()->addParticle(pos, 0);
+        }
+    }
     integrator.particles()->initializeParticles(25000, system.types[1].name);
+    /*integrator.particles()->initializeParticles(25000, system.types[0].name);
+    integrator.particles()->initializeParticles(25000, system.types[1].name);*/
 
     spdlog::set_level(spdlog::level::debug);
     for(std::size_t t = 0; t < nSteps; ++t) {

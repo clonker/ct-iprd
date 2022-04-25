@@ -20,7 +20,7 @@ template<typename T>
 using np_array = ctiprd::binding::np_array<T>;
 using System = ctiprd::systems::LotkaVolterra<float>;
 
-void check_shape(const np_array<float> &arr) {
+void check_shape(const np_array<System::dtype> &arr) {
     if(arr.ndim() != 2) {
         throw std::runtime_error(
                 fmt::format("Provided particle array needs to be two-dimensional but was {}-dimensional.", arr.ndim())
@@ -39,7 +39,7 @@ PYBIND11_MODULE(lv_mod, m) {
     ctiprd::binding::exportSystem<System>(m, "LotkaVolterra");
 
     m.def("simulate", [] (std::size_t nSteps, float dt, int njobs,
-            const np_array<float>& prey, const np_array<float>& predator,
+            const np_array<System::dtype>& prey, const np_array<System::dtype>& predator,
             py::handle progressCallback) {
         check_shape(predator);
         check_shape(prey);
@@ -54,7 +54,7 @@ PYBIND11_MODULE(lv_mod, m) {
             integrator.particles()->addParticle({predator.at(i, 0), predator.at(i, 1)}, "predator");
         }
 
-        std::vector<std::tuple<np_array<float>, np_array<std::size_t>>> trajectory;
+        std::vector<std::tuple<np_array<System::dtype>, np_array<std::size_t>>> trajectory;
         {
             py::gil_scoped_release release;
             for (std::size_t t = 0; t < nSteps; ++t) {
@@ -67,7 +67,7 @@ PYBIND11_MODULE(lv_mod, m) {
                     auto nParticles = integrator.particles()->size();
                     std::size_t shapeTraj[2] = {nParticles, 2};
                     std::size_t shapeTypes[1] = {nParticles};
-                    trajectory.emplace_back(np_array<float>{shapeTraj}, np_array<std::size_t>{shapeTypes});
+                    trajectory.emplace_back(np_array<System::dtype>{shapeTraj}, np_array<std::size_t>{shapeTypes});
                     auto &[traj, types] = trajectory.back();
 
                     auto* trajBegin = traj.mutable_data(0);
