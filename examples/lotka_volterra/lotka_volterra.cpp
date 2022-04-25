@@ -76,7 +76,7 @@ PYBIND11_MODULE(lv_mod, m) {
 
                     auto* typesBegin = types.mutable_data(0);
                     auto* typesEnd = typesBegin + types.size();
-                    std::fill(typesBegin, typesEnd, std::numeric_limits<std::size_t>::infinity());
+                    std::fill(typesBegin, typesEnd, System::types.size()); // out of bounds type (invalid)
 
                     futures = integrator.particles()->forEachParticle([&trajBegin, &typesBegin](auto id, const auto &pos, const auto& type, const auto &force) {
                         typesBegin[id] = type;
