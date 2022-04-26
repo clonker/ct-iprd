@@ -117,7 +117,7 @@ public:
     }
 
     [[nodiscard]] size_type size() const {
-        return positions_.size();
+        return positions_.size(); // todo if sorted it's enough to go until the first inactive element potentially saving a lot of compute power
     }
 
     void setType(size_type index, const ParticleType &type) {
