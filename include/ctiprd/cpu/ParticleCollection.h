@@ -406,6 +406,7 @@ struct SynchronizedParticleCollectionUpdater {
     using Index = typename ParticleCollection::size_type;
     using dtype = typename Particles::dtype;
     static constexpr int dim = Particles::dim;
+    static constexpr bool periodic = System::periodic;
 
     explicit SynchronizedParticleCollectionUpdater(const ParticleCollection &collection) : changed(collection.size()) {}
 
