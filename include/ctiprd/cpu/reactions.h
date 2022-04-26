@@ -49,7 +49,7 @@ template<typename dtype, typename State, typename ParticleType>
 [[nodiscard]] bool shouldPerformO2(dtype tau, const State &state, const ParticleType &t,
                                    const State &state2, const ParticleType &t2,
                                    const ParticleType &eductType1, const ParticleType &eductType2,
-                                   dtype rate, dtype radius) {
+                                   dtype rate, dtype radius) { // todo account for periodic b.c.
     if ((t == eductType1 && t2 == eductType2) || (t == eductType2 && t2 == eductType1)) {
         return (state - state2).normSquared() < radius * radius &&
                rnd::uniform_real<dtype>() < 1 - std::exp(-rate * tau);
