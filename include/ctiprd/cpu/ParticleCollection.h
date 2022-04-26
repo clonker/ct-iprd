@@ -117,7 +117,7 @@ public:
     }
 
     [[nodiscard]] size_type size() const {
-        return positions_.size();
+        return positions_.size() - blanks.size();
     }
 
     void setType(size_type index, const ParticleType &type) {
