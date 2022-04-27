@@ -27,11 +27,11 @@ struct LotkaVolterra {
     static constexpr ParticleTypes<dtype, 2> types{{
               {
                       .name = "predator",
-                      .diffusionConstant = .1
+                      .diffusionConstant = 1.
               },
               {
                       .name = "prey",
-                      .diffusionConstant = .1
+                      .diffusionConstant = 1.
               },
     }};
     static constexpr std::size_t preyId = particleTypeId<types>("prey");
@@ -39,39 +39,41 @@ struct LotkaVolterra {
     
     LotkaVolterra() {
         {
-            std::get<0>(reactionsO1) = reactions::doi::Fission<T>{
+            auto& [birth, death] = reactionsO1;
+            birth = reactions::doi::Fission<T>{
                     .eductType = preyId,
                     .productType1 = preyId,
                     .productType2 = preyId,
                     .productDistance = 1.,
                     .rate = 2
             };
-            std::get<1>(reactionsO1) = reactions::doi::Decay<T>{
+            death = reactions::doi::Decay<T>{
                     .eductType = predatorId,
                     .rate = 1.5
             };
         }
         {
-            std::get<0>(reactionsO2) = reactions::doi::Fusion<T>{
+            auto &[preySocialFriction, predatorSocialFriction, predEatsPrey] = reactionsO2;
+            preySocialFriction = reactions::doi::Fusion<T>{
                     .eductType1 = preyId,
                     .eductType2 = preyId,
                     .productType = preyId,
-                    .reactionRadius = 0.05,
-                    .rate = 21.112150808892327
+                    .reactionRadius = 0.5,
+                    .rate = 0.019116848082565446
             };
-            std::get<1>(reactionsO2) = reactions::doi::Fusion<T>{
+            predatorSocialFriction = reactions::doi::Fusion<T>{
                     .eductType1 = predatorId,
                     .eductType2 = predatorId,
                     .productType = predatorId,
-                    .reactionRadius = 0.05,
-                    .rate = 21.112150808892327
+                    .reactionRadius = 0.5,
+                    .rate = 0.019116848082565446
             };
-            std::get<2>(reactionsO2) = reactions::doi::Catalysis<T>{
+            predEatsPrey = reactions::doi::Catalysis<T>{
                     .catalyst = predatorId,
                     .eductType = preyId,
                     .productType = predatorId,
-                    .reactionRadius = 0.3,
-                    .rate = 0.4802773599751755
+                    .reactionRadius = 0.5,
+                    .rate = 0.09595107151845629
             };
         }
         {/*

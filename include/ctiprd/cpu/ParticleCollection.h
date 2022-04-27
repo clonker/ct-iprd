@@ -102,7 +102,7 @@ public:
     using ParticleType = std::size_t;
 
     template<typename T>
-    using ContainerType = std::deque<T>;
+    using ContainerType = std::vector<T>;
 
     using size_type = typename ContainerType<MaybePosition>::size_type;
 
