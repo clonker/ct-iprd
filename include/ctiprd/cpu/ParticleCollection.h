@@ -235,6 +235,8 @@ public:
                 ++nSwapped;
             }
         }
+        positions_.resize(positions_.size() - blanks.size());
+        blanks.clear();
     }
 
     template<typename F, typename Pool>
