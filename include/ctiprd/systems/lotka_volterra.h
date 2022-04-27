@@ -22,7 +22,7 @@ struct LotkaVolterra {
     using dtype = T;
     static constexpr std::size_t DIM = 2;
     static constexpr std::array<T, DIM> boxSize{10., 10.};
-    static constexpr bool periodic = false;
+    static constexpr bool periodic = true;
     static constexpr T kBT = 2.43614;
     static constexpr ParticleTypes<dtype, 2> types{{
               {
@@ -74,16 +74,16 @@ struct LotkaVolterra {
                     .rate = 0.4802773599751755
             };
         }
-        {
+        {/*
             auto &box = std::get<0>(externalPotentials);
             box.geometry.v0 = {-4., -24.};
             box.geometry.v1 = {4., 24.};
             box.k = 50.;
-        }
+        */}
     }
 
 
-    using ExternalPotentials = std::tuple<potentials::external::BoxInclusion<dtype, DIM, true>>;
+    using ExternalPotentials = std::tuple<>;  // potentials::external::BoxInclusion<dtype, DIM, true>
     using PairPotentials = std::tuple<>;
 
     using ReactionsO1 = std::tuple<

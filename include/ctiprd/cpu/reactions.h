@@ -45,13 +45,13 @@ template<typename dtype, typename State, typename ParticleType, typename Reactio
     return t == reaction.eductType && rnd::uniform_real<dtype>() < 1 - std::exp(-reaction.rate * tau);
 }
 
-template<typename dtype, typename State, typename ParticleType>
+template<typename System, typename dtype, typename State, typename ParticleType>
 [[nodiscard]] bool shouldPerformO2(dtype tau, const State &state, const ParticleType &t,
                                    const State &state2, const ParticleType &t2,
                                    const ParticleType &eductType1, const ParticleType &eductType2,
                                    dtype rate, dtype radius) {
     if ((t == eductType1 && t2 == eductType2) || (t == eductType2 && t2 == eductType1)) {
-        return (state - state2).normSquared() < radius * radius &&
+        return util::pbc::shortestDifference<System>(state, state2).normSquared() < radius * radius &&
                rnd::uniform_real<dtype>() < 1 - std::exp(-rate * tau);
     }
     return false;
@@ -150,7 +150,7 @@ struct CPUReactionO2<Updater, ctiprd::reactions::doi::Fusion<typename Updater::d
 
     bool shouldPerform(dtype tau, const State &s1, const std::size_t &t1,
                        const State &s2, const std::size_t &t2) const override {
-        return detail::shouldPerformO2(tau, s1, t1, s2, t2, baseReaction.eductType1, baseReaction.eductType2,
+        return detail::shouldPerformO2<typename Updater::System>(tau, s1, t1, s2, t2, baseReaction.eductType1, baseReaction.eductType2,
                                        baseReaction.rate, baseReaction.reactionRadius);
     }
 
@@ -187,7 +187,7 @@ struct CPUReactionO2<Updater, ctiprd::reactions::doi::Catalysis<typename Updater
 
     bool shouldPerform(dtype tau, const State &s1, const std::size_t &t1,
                        const State &s2, const std::size_t &t2) const override {
-        return detail::shouldPerformO2(tau, s1, t1, s2, t2, baseReaction.catalyst, baseReaction.eductType,
+        return detail::shouldPerformO2<typename Updater::System>(tau, s1, t1, s2, t2, baseReaction.catalyst, baseReaction.eductType,
                                        baseReaction.rate, baseReaction.reactionRadius);
     }
 

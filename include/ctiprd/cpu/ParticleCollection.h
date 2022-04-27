@@ -117,7 +117,7 @@ public:
     }
 
     [[nodiscard]] size_type size() const {
-        return positions_.size();
+        return positions_.size(); // todo if sorted it's enough to go until the first inactive element potentially saving a lot of compute power
     }
 
     void setType(size_type index, const ParticleType &type) {
@@ -399,7 +399,7 @@ struct ParticleCollectionUpdater {
     }
 };
 
-template<typename System, typename ParticleCollection>
+template<typename T, typename ParticleCollection>
 struct SynchronizedParticleCollectionUpdater {
     using Particles = ParticleCollection;
     using ParticleType = typename ParticleCollection::ParticleType;
@@ -407,7 +407,9 @@ struct SynchronizedParticleCollectionUpdater {
     using State = Position;
     using Index = typename ParticleCollection::size_type;
     using dtype = typename Particles::dtype;
+    using System = T;
     static constexpr int dim = Particles::dim;
+    static constexpr bool periodic = T::periodic;
 
     explicit SynchronizedParticleCollectionUpdater(const ParticleCollection &collection) : changed(collection.size()) {}
 
