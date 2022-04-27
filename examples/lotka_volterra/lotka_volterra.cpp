@@ -18,7 +18,7 @@ namespace py = pybind11;
 
 template<typename T>
 using np_array = ctiprd::binding::np_array<T>;
-using System = ctiprd::systems::LotkaVolterra<float>;
+using System = ctiprd::systems::LotkaVolterra<double>;
 
 void check_shape(const np_array<System::dtype> &arr) {
     if(arr.ndim() != 2) {
