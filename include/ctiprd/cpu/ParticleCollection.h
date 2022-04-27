@@ -223,7 +223,6 @@ public:
                 // swap with nSwapped-th blank
                 auto blank = blanks[nSwapped];
                 positions_[blank] = positions_[i];
-                positions_[i].reset();
                 particleTypes_[blank] = particleTypes_[i];
                 if constexpr(containsForces()) {
                     forces_[blank] = forces_[i];
@@ -231,7 +230,6 @@ public:
                 if constexpr(containsVelocities()) {
                     velocities_[blank] = velocities_[i];
                 }
-                blanks[nSwapped] = i;
                 ++nSwapped;
             }
         }
