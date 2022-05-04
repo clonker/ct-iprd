@@ -49,11 +49,12 @@ public:
         return true;
     }
     // deletes the retrieved element, do not use for non integral types
-    bool pop(T & v) {
+    bool pop(T & value) {
         std::unique_lock<std::mutex> lock(this->mutex);
-        if (this->q.empty())
+        if (this->q.empty()) {
             return false;
-        v = this->q.front();
+        }
+        value = this->q.front();
         this->q.pop();
         return true;
     }
@@ -89,7 +90,7 @@ public:
 
     // number of idle threads
     int n_idle() { return this->nWaiting; }
-    std::thread & get_thread(int i) { return *this->threads[i]; }
+    std::thread & get_thread(int threadNumber) { return *this->threads[threadNumber]; }
 
     // change the number of threads in the pool
     // should be called from one thread, otherwise be careful to not interleave, also with this->stop()
@@ -125,8 +126,9 @@ public:
     // empty the queue
     void clear_queue() {
         std::function<void()> * _f;
-        while (this->q.pop(_f))
+        while (this->q.pop(_f)) {
             delete _f; // empty the queue
+        }
     }
 
     // pops a functional wrapper to the original function
@@ -145,10 +147,11 @@ public:
     // if isWait == true, all the functions in the queue are run, otherwise the queue is cleared without running the functions
     void stop(bool isWait = false) {
         if (!isWait) {
-            if (this->isStop)
+            if (this->isStop) {
                 return;
+            }
             this->isStop = true;
-            for (int i = 0, n = this->size(); i < n; ++i) {
+            for (int i = 0, size = this->size(); i < size; ++i) {
                 *this->flags[i] = true;  // command the threads to stop
             }
             this->clear_queue();  // empty the queue
