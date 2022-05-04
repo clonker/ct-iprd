@@ -24,9 +24,7 @@ template<typename Updater>
 struct ReactionO1 {
     using dtype = typename Updater::dtype;
     using State = typename Updater::Position;
-    [[nodiscard]] virtual bool shouldPerform([[maybe_unused]] dtype tau,
-                                             [[maybe_unused]] const State &state,
-                                             [[maybe_unused]] const std::size_t &typeId) const {
+    [[nodiscard]] virtual bool shouldPerform([[maybe_unused]] const dtype &tau) const {
         return false;
     };
 
@@ -37,29 +35,19 @@ template<typename Updater>
 struct ReactionO2 {
     using dtype = typename Updater::dtype;
     using State = typename Updater::Position;
-    [[nodiscard]] virtual bool shouldPerform(dtype tau, const State &s1, const std::size_t &t1,
-                                             const State &s2, const std::size_t &t2) const { return false; };
+    [[nodiscard]] virtual bool shouldPerform([[maybe_unused]] const dtype &tau) const { return false; };
 
     virtual void operator()(std::size_t id1, std::size_t id2, typename Updater::Particles &collection, Updater &updater) const {}
+
+    dtype radiusSquared {};
+    dtype rate {};
 };
 
 namespace detail {
 
-template<typename dtype, typename State, typename ParticleType, typename Reaction>
-[[nodiscard]] bool shouldPerformO1(dtype tau, const State &state, const ParticleType &t, const Reaction &reaction) {
-    return t == reaction.eductType && rnd::uniform_real<dtype>() < 1 - std::exp(-reaction.rate * tau);
-}
-
-template<typename System, typename dtype, typename State, typename ParticleType>
-[[nodiscard]] bool shouldPerformO2(dtype tau, const State &state, const ParticleType &t,
-                                   const State &state2, const ParticleType &t2,
-                                   const ParticleType &eductType1, const ParticleType &eductType2,
-                                   dtype rate, dtype radius) {
-    if ((t == eductType1 && t2 == eductType2) || (t == eductType2 && t2 == eductType1)) {
-        return util::pbc::shortestDifference<System>(state, state2).normSquared() < radius * radius &&
-               rnd::uniform_real<dtype>() < 1 - std::exp(-rate * tau);
-    }
-    return false;
+template<typename dtype>
+[[nodiscard]] bool shouldPerform(const dtype &tau, const dtype &rate) {
+    return rnd::uniform_real<dtype>() < 1 - std::exp(-rate * tau);
 }
 
 template<typename Updater, typename Reaction>
@@ -73,8 +61,8 @@ struct CPUReactionO1<Updater, ctiprd::reactions::doi::Decay<typename Updater::dt
 
     explicit CPUReactionO1(const ReactionType &reaction) : baseReaction(reaction) {}
 
-    bool shouldPerform(dtype tau, const State &s1, const std::size_t &t1) const override {
-        return detail::shouldPerformO1(tau, s1, t1, baseReaction);
+    bool shouldPerform(const dtype &tau) const override {
+        return detail::shouldPerform(tau, baseReaction.rate);
     }
 
     void operator()(std::size_t id, typename Updater::Particles &collection, Updater &updater) const override {
@@ -92,8 +80,8 @@ struct CPUReactionO1<Updater, ctiprd::reactions::doi::Conversion<typename Update
 
     explicit CPUReactionO1(const ReactionType &reaction) : baseReaction(reaction) {}
 
-    bool shouldPerform(dtype tau, const State &s1, const std::size_t &t1) const override {
-        return detail::shouldPerformO1(tau, s1, t1, baseReaction);
+    bool shouldPerform(const dtype &tau) const override {
+        return detail::shouldPerform(tau, baseReaction.rate);
     }
 
     void operator()(std::size_t id, typename Updater::Particles &collection, Updater &updater) const override {
@@ -111,8 +99,8 @@ struct CPUReactionO1<Updater, ctiprd::reactions::doi::Fission<typename Updater::
 
     explicit CPUReactionO1(const ReactionType &reaction) : baseReaction(reaction) {}
 
-    bool shouldPerform(dtype tau, const State &s1, const std::size_t &t1) const override {
-        return detail::shouldPerformO1(tau, s1, t1, baseReaction);
+    bool shouldPerform(const dtype &tau) const override {
+        return detail::shouldPerform(tau, baseReaction.rate);
     }
 
     template<typename Generator>
@@ -146,17 +134,18 @@ template<typename Updater, typename Reaction>
 struct CPUReactionO2 : ReactionO2<Updater> {};
 
 template<typename Updater>
-struct CPUReactionO2<Updater, ctiprd::reactions::doi::Fusion<typename Updater::dtype>> : ReactionO2<Updater> {
+struct CPUReactionO2<Updater, ctiprd::reactions::doi::Fusion<typename Updater::dtype>> : public ReactionO2<Updater> {
     using ReactionType = ctiprd::reactions::doi::Fusion<typename Updater::dtype>;
+    using Super = CPUReactionO2<Updater, ReactionType>;
     using typename ReactionO2<Updater>::dtype;
     using typename ReactionO2<Updater>::State;
 
-    explicit CPUReactionO2(const ReactionType &reaction) : baseReaction(reaction) {}
+    explicit CPUReactionO2(const ReactionType &reaction) : baseReaction(reaction) {
+        Super::radiusSquared = baseReaction.reactionRadius * baseReaction.reactionRadius;
+    }
 
-    bool shouldPerform(dtype tau, const State &s1, const std::size_t &t1,
-                       const State &s2, const std::size_t &t2) const override {
-        return detail::shouldPerformO2<typename Updater::System>(tau, s1, t1, s2, t2, baseReaction.eductType1, baseReaction.eductType2,
-                                       baseReaction.rate, baseReaction.reactionRadius);
+    bool shouldPerform(const dtype &tau) const override {
+        return detail::shouldPerform(tau, baseReaction.rate);
     }
 
     [[nodiscard]] auto key() const {
@@ -185,15 +174,16 @@ struct CPUReactionO2<Updater, ctiprd::reactions::doi::Fusion<typename Updater::d
 template<typename Updater>
 struct CPUReactionO2<Updater, ctiprd::reactions::doi::Catalysis<typename Updater::dtype>> : ReactionO2<Updater> {
     using ReactionType = ctiprd::reactions::doi::Catalysis<typename Updater::dtype>;
+    using Super = CPUReactionO2<Updater, ReactionType>;
     using typename ReactionO2<Updater>::dtype;
     using typename ReactionO2<Updater>::State;
 
-    explicit CPUReactionO2(const ReactionType &reaction) : baseReaction(reaction) {}
+    explicit CPUReactionO2(const ReactionType &reaction) : baseReaction(reaction) {
+        Super::radiusSquared = baseReaction.reactionRadius * baseReaction.reactionRadius;
+    }
 
-    bool shouldPerform(dtype tau, const State &s1, const std::size_t &t1,
-                       const State &s2, const std::size_t &t2) const override {
-        return detail::shouldPerformO2<typename Updater::System>(tau, s1, t1, s2, t2, baseReaction.catalyst, baseReaction.eductType,
-                                       baseReaction.rate, baseReaction.reactionRadius);
+    bool shouldPerform(const dtype &tau) const override {
+        return detail::shouldPerform(tau, baseReaction.rate);
     }
 
     [[nodiscard]] auto key() const {

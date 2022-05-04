@@ -61,7 +61,7 @@ struct UncontrolledApproximation {
     }
 
     template<typename Pool>
-    void reactions(dtype tau, std::shared_ptr<ParticleCollection> particles, std::shared_ptr<Pool> pool) {
+    void reactions(const dtype tau, std::shared_ptr<ParticleCollection> particles, std::shared_ptr<Pool> pool) {
 
         std::vector<std::future<void>> futures;
 
@@ -81,7 +81,7 @@ struct UncontrolledApproximation {
                     std::vector<ReactionEvent> localEvents;
                     const auto &reactions = reactionsO1[type];
                     for (std::size_t i = 0; i < reactions.size(); ++i) {
-                        if (reactions[i]->shouldPerform(tau, pos, type)) {
+                        if (reactions[i]->shouldPerform(tau)) {
                             localEvents.push_back({1, particleId, particleId, i, type, 0});
                         }
                     }
@@ -109,8 +109,10 @@ struct UncontrolledApproximation {
                         const auto &position2 = data.positionOf(id2);
 
                         const auto &reactions = that->reactionsO2[{type1, type2}];
+
+                        const auto distsq = util::pbc::shortestDifference<System>(position1, position2).normSquared();
                         for (std::size_t i = 0; i < reactions.size(); ++i) {
-                            if (reactions[i]->shouldPerform(tau, position1, type1, position2, type2)) {
+                            if (distsq <= reactions[i]->radiusSquared && reactions[i]->shouldPerform(tau)) {
                                 localEvents.push_back({2, id1, id2, i, type1, type2});
                             }
                         }
