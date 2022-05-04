@@ -117,7 +117,7 @@ public:
     }
 
     [[nodiscard]] size_type size() const {
-        return positions_.size(); // todo if sorted it's enough to go until the first inactive element potentially saving a lot of compute power
+        return positions_.size();
     }
 
     void setType(size_type index, const ParticleType &type) {
@@ -180,8 +180,8 @@ public:
         blanks.push_back(index);
     }
 
-    template<typename IteratorAdd, typename IteratorRemove>
-    void update(IteratorAdd beginAdd, IteratorAdd endAdd, IteratorRemove beginRemove, IteratorRemove endRemove) {
+    template<typename AddIterator, typename RemoveIterator>
+    void update(AddIterator beginAdd, AddIterator endAdd, RemoveIterator beginRemove, RemoveIterator endRemove) {
         auto itAdd = beginAdd;
         auto itRemove = beginRemove;
         while(itAdd != endAdd && itRemove != endRemove) {
@@ -207,12 +207,12 @@ public:
         }
     }
 
-    [[nodiscard]] ParticleType typeOf(std::size_t ix) const {
-        return particleTypes_[ix];
+    [[nodiscard]] ParticleType typeOf(const std::size_t particleIndex) const {
+        return particleTypes_[particleIndex];
     }
 
-    [[nodiscard]] bool exists(std::size_t ix) const {
-        return positions_[ix].has_value();
+    [[nodiscard]] bool exists(const std::size_t particleIndex) const {
+        return positions_[particleIndex].has_value();
     }
 
     void sort() {
@@ -238,12 +238,12 @@ public:
     }
 
     template<typename F, typename Pool>
-    std::vector<std::future<void>> forEachParticle(F &&op, config::PoolPtr<Pool> pool) {
+    std::vector<std::future<void>> forEachParticle(F &&operation, config::PoolPtr<Pool> pool) {
         std::vector<std::future<void>> futures;
-        auto granularity = config::threadGranularity(pool);
+        const auto granularity = config::threadGranularity(pool);
         futures.reserve(granularity);
 
-        auto loop = [operation = std::forward<F>(op)](
+        const auto loop = [operation = std::forward<F>(operation)](
                 auto startIndex,
                 const auto &beginPositions, const auto &endPositions,
                 auto itTypes, auto itForces, auto itVelocities
@@ -270,8 +270,7 @@ public:
             }
         };
 
-        auto n = size();
-        auto grainSize = n / granularity;
+        const auto grainSize = size() / granularity;
         auto itPos = positions_.begin();
         auto itTypes = particleTypes_.begin();
         auto itForces = forces_.begin();
@@ -340,9 +339,9 @@ struct ParticleCollectionUpdater {
     std::deque<std::tuple<Position, ParticleType>> toAdd;
     std::deque<Index> toRemove;
 
-    std::mutex addMutex, removeMutex;
+    // std::mutex addMutex, removeMutex;
 
-    void add(const ParticleType &type, Position &&position, ParticleCollection &collection) {
+    void add(const ParticleType &type, Position &&position, const auto &/*ignore*/) {
         util::pbc::wrapPBC<System>(position);
         // std::scoped_lock lock(addMutex);
         toAdd.emplace_back(std::move(position), type);

@@ -24,9 +24,13 @@ template<typename Updater>
 struct ReactionO1 {
     using dtype = typename Updater::dtype;
     using State = typename Updater::Position;
-    [[nodiscard]] virtual bool shouldPerform(dtype tau, const State &s1, const std::size_t &t1) const { return false; };
+    [[nodiscard]] virtual bool shouldPerform([[maybe_unused]] dtype tau,
+                                             [[maybe_unused]] const State &state,
+                                             [[maybe_unused]] const std::size_t &typeId) const {
+        return false;
+    };
 
-    virtual void operator()(std::size_t id, typename Updater::Particles &collection, Updater &updater) const {}
+    virtual void operator()(std::size_t particleId, typename Updater::Particles &collection, Updater &updater) const {}
 };
 
 template<typename Updater>

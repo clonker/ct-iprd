@@ -164,7 +164,8 @@ public:
         }
     }
 
-    typename Index::GridDims gridPos(const dtype *pos) const {
+    template<typename Position>
+    typename Index::GridDims gridPos(const Position &pos) const {
         typename Index::GridDims projections;
         for (auto i = 0U; i < DIM; ++i) {
             projections[i] = static_cast<typename Index::value_type>(
@@ -175,7 +176,8 @@ public:
         return projections;
     }
 
-    std::uint32_t positionToBoxIx(const dtype *pos) const {
+    template<typename Position>
+    std::uint32_t positionToBoxIx(const Position &pos) const {
         return _index.index(gridPos(pos));
     }
 
@@ -274,7 +276,7 @@ public:
             }
         }
         {
-            const auto boxId = positionToBoxIx(&pos[0]);
+            const auto boxId = positionToBoxIx(pos[0]);
             auto neighborId = (*head.at(boxId)).load();
             while (neighborId != 0) {
                 if (neighborId != particleId) {
