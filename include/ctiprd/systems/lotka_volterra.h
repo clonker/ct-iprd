@@ -26,8 +26,8 @@ struct Conf {
     static constexpr T alpha = 2.;  // birth: prey -> prey + prey
     static constexpr T alphaDistance = 2.;  // birth distance
     static constexpr T beta = 0.05;  // eat: prey + pred -> pred + pred
-    static constexpr T betaRadius = 0.4;
-    static constexpr T betaMic = 0.4526397838649777;
+    static constexpr T betaRadius = 0.25;
+    static constexpr T betaMic = 7.670679846561291;
     static constexpr T gamma = 1.5;
 
     static constexpr T friction = 0.01;
@@ -40,7 +40,7 @@ struct LotkaVolterra {
     using Cfg = Conf<T>;
     using dtype = T;
     static constexpr std::size_t DIM = 3;
-    static constexpr std::array<T, DIM> boxSize{10., 10., 10.};
+    static constexpr std::array<T, DIM> boxSize{5., 5., 5.};
     static constexpr bool periodic = true;
     static constexpr T kBT = 2.43614;
     static constexpr ParticleTypes<dtype, 2> types{{
