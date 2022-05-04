@@ -134,7 +134,7 @@ struct CPUReactionO1<Updater, ctiprd::reactions::doi::Fission<typename Updater::
         });
         n /= n.norm();
 
-        const auto distance = baseReaction.productDistance * std::pow(uniform(rnd::staticThreadLocalGenerator()), 1/Updater::dim);
+        const auto distance = baseReaction.productDistance * std::pow(uniform(rnd::staticThreadLocalGenerator()), 1./Updater::dim);
         updater.add(baseReaction.productType2, c - 0.5 * distance * n, collection);
         updater.directUpdate(id, baseReaction.productType1, c + 0.5 * distance * n, collection);
     }

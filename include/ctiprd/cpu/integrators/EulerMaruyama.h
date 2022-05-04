@@ -73,7 +73,7 @@ public:
         }
 
         if constexpr(Info::hasReactions()) {
-            reactions->reactions(system, stepSize, particles_, pool_);
+            reactions->reactions(stepSize, particles_, pool_);
 
             if constexpr(Info::periodic) {
                 const auto fut = particles_->forEachParticle([](const auto &, auto &pos, const auto &, const auto &) {

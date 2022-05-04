@@ -34,7 +34,7 @@ PYBIND11_MODULE(dw_mod, m) {
         for(std::size_t t = 0; t < nSteps; ++t) {
             integrator.step(1e-3);
 
-            const auto &positions = integrator.particles()->positions();
+            const auto &positions = integrator.particles()->positions_();
             auto i = 0;
             for (const auto &pos: positions) {
                 out.mutable_at(t, i, 0) = (*pos)[0];

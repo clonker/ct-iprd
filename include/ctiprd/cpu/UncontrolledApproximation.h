@@ -61,8 +61,7 @@ struct UncontrolledApproximation {
     }
 
     template<typename Pool>
-    void reactions(const System &system, dtype tau, std::shared_ptr<ParticleCollection> particles,
-                   std::shared_ptr<Pool> pool) {
+    void reactions(dtype tau, std::shared_ptr<ParticleCollection> particles, std::shared_ptr<Pool> pool) {
 
         std::vector<std::future<void>> futures;
 
@@ -74,7 +73,7 @@ struct UncontrolledApproximation {
         std::vector<ReactionEvent> events;
         {
             {
-                const auto worker = [this, &system, tau, neighborList = neighborList_.get(), data = particles.get(), &events, &mutex](
+                const auto worker = [this, tau, neighborList = neighborList_.get(), data = particles.get(), &events, &mutex](
                         const auto particleId, typename ParticleCollection::Position &pos,
                         const typename ParticleCollection::ParticleType &type,
                         const auto &/*ignore*/

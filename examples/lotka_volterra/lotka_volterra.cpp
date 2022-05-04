@@ -45,6 +45,9 @@ PYBIND11_MODULE(lv_mod, m) {
         check_shape(prey);
 
         System system {};
+
+        ctiprd::binding::Trajectory<System> traj;
+
         auto pool = ctiprd::config::make_pool(njobs);
         auto integrator = ctiprd::cpu::integrator::EulerMaruyama{system, pool};
         for(auto i = 0; i < prey.shape(0); ++i) {
@@ -54,51 +57,27 @@ PYBIND11_MODULE(lv_mod, m) {
             integrator.particles()->addParticle({predator.at(i, 0), predator.at(i, 1)}, "predator");
         }
 
-        std::vector<std::tuple<np_array<System::dtype>, np_array<std::size_t>>> trajectory;
         {
             py::gil_scoped_release release;
-            for (std::size_t t = 0; t < nSteps; ++t) {
-                integrator.step(dt);
-                std::vector<std::future<void>> futures {};
-
-                if (t % 200 == 0) {
-                    py::gil_scoped_acquire acquire;
-
-                    auto nParticles = integrator.particles()->size();
-                    std::size_t shapeTraj[2] = {nParticles, 2};
-                    std::size_t shapeTypes[1] = {nParticles};
-                    trajectory.emplace_back(np_array<System::dtype>{shapeTraj}, np_array<std::size_t>{shapeTypes});
-                    auto &[traj, types] = trajectory.back();
-
-                    auto* trajBegin = traj.mutable_data(0);
-                    auto* trajEnd = trajBegin + traj.size();
-                    std::fill(trajBegin, trajEnd, std::numeric_limits<System::dtype>::infinity());
-
-                    auto* typesBegin = types.mutable_data(0);
-                    auto* typesEnd = typesBegin + types.size();
-                    std::fill(typesBegin, typesEnd, System::types.size()); // out of bounds type (invalid)
-
-                    futures = integrator.particles()->forEachParticle([&trajBegin, &typesBegin](auto id, const auto &pos, const auto& type, const auto &force) {
-                        typesBegin[id] = type;
-                        trajBegin[2*id] = pos[0];
-                        trajBegin[2*id+1] = pos[1];
-                    }, pool);
-
-                    progressCallback(t);
+            for (std::size_t step = 0; step < nSteps; ++step) {
+                if (step % 20 == 0) {
+                    traj.record(step, integrator, pool);
                 }
 
-                if(t % 50 == 0) {
+                integrator.step(dt);
+
+                if(step % 5 == 0) {
                     py::gil_scoped_acquire acquire;
                     if (PyErr_CheckSignals() != 0) {
                         throw py::error_already_set();
                     }
-                }
 
-                for(auto &future : futures) future.wait();
+                    progressCallback(step);
+                }
             }
         }
 
         pool->stop();
-        return trajectory;
+        return traj;
     });
 }

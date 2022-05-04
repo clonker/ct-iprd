@@ -13,6 +13,8 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 
+#include <ctiprd/binding/trajectory.h>
+
 namespace ctiprd::binding {
 
 namespace py = pybind11;
@@ -76,6 +78,12 @@ void exportSystem(py::module_ &module, std::string_view name) {
     clazz.template def_property_readonly("reactions_o2", [](const System &self) {
         return self.reactionsO2;
     });
+
+    using Traj = ctiprd::binding::Trajectory<System>;
+    py::class_<Traj>(module, (strName + "Trajectory").c_str())
+            .def_property_readonly("time", &Traj::time)
+            .def_property_readonly("positions", &Traj::positions)
+            .def_property_readonly("types", &Traj::types);
 }
 
 }
