@@ -14,11 +14,30 @@
 #include <ctiprd/ParticleTypes.h>
 #include <ctiprd/reactions/doi.h>
 #include <ctiprd/systems/util.h>
+#include <ctiprd/util/rates.h>
 
 namespace ctiprd::systems {
 
 template<typename T>
+struct Conf {
+    static constexpr T diffPrey = 0.01;
+    static constexpr T diffPred = 0.01;
+
+    static constexpr T alpha = 2.;  // birth: prey -> prey + prey
+    static constexpr T alphaDistance = 1.5;  // birth distance
+    static constexpr T beta = 0.05;  // eat: prey + pred -> pred + pred
+    static constexpr T betaRadius = 0.4;
+    static constexpr T betaMic = 0.4526397838649777;
+    static constexpr T gamma = 1.5;
+
+    static constexpr T friction = 0.01;
+    static constexpr T frictionRadius = 0.2;
+    static constexpr T frictionMic = 0.39155565024786165;
+};
+
+template<typename T>
 struct LotkaVolterra {
+    using Conf = Conf<T>;
     using dtype = T;
     static constexpr std::size_t DIM = 2;
     static constexpr std::array<T, DIM> boxSize{10., 10.};
@@ -27,11 +46,11 @@ struct LotkaVolterra {
     static constexpr ParticleTypes<dtype, 2> types{{
               {
                       .name = "predator",
-                      .diffusionConstant = .01
+                      .diffusionConstant = Conf::diffPred
               },
               {
                       .name = "prey",
-                      .diffusionConstant = .01
+                      .diffusionConstant = Conf::diffPrey
               },
     }};
     static constexpr std::size_t preyId = particleTypeId<types>("prey");
@@ -44,12 +63,12 @@ struct LotkaVolterra {
                     .eductType = preyId,
                     .productType1 = preyId,
                     .productType2 = preyId,
-                    .productDistance = 1.,
-                    .rate = 2
+                    .productDistance = Conf::alphaDistance,
+                    .rate = Conf::alpha
             };
             death = reactions::doi::Decay<T>{
                     .eductType = predatorId,
-                    .rate = 1.5
+                    .rate = Conf::gamma
             };
         }
         {
@@ -58,23 +77,43 @@ struct LotkaVolterra {
                     .eductType1 = preyId,
                     .eductType2 = preyId,
                     .productType = preyId,
-                    .reactionRadius = 0.5,
-                    .rate = 0.021112150996294498
+                    .reactionRadius = Conf::frictionRadius,
+                    .rate = Conf::frictionMic
             };
             predatorSocialFriction = reactions::doi::Fusion<T>{
                     .eductType1 = predatorId,
                     .eductType2 = predatorId,
                     .productType = predatorId,
-                    .reactionRadius = 0.5,
-                    .rate = 0.021112150996294498
+                    .reactionRadius = Conf::frictionRadius,
+                    .rate = Conf::frictionMic
             };
             predEatsPrey = reactions::doi::Catalysis<T>{
                     .catalyst = predatorId,
                     .eductType = preyId,
                     .productType = predatorId,
-                    .reactionRadius = 0.5,
-                    .rate = 0.18112696641998566
+                    .reactionRadius = Conf::betaRadius,
+                    .rate = Conf::betaMic
             };
+        }
+
+
+        {
+            static constexpr dtype eps = 1e-5;
+
+            auto kmac = rates::macroscopicRate(Conf::betaMic, types[preyId].diffusionConstant,
+                                               types[predatorId].diffusionConstant, Conf::betaRadius);
+            if(std::abs(kmac - Conf::beta) > eps) {
+                throw std::runtime_error(fmt::format("kmac = {}, beta = {}", kmac, Conf::beta));
+            }
+        }
+        {
+            static constexpr dtype eps = 1e-5;
+
+            auto kmac = rates::macroscopicRate(Conf::frictionMic, types[preyId].diffusionConstant,
+                                               types[predatorId].diffusionConstant, Conf::frictionRadius);
+            if(std::abs(kmac - Conf::friction) > eps) {
+                throw std::runtime_error(fmt::format("kmac = {}, friction = {}", kmac, Conf::friction));
+            }
         }
         {/*
             auto &box = std::get<0>(externalPotentials);
