@@ -15,6 +15,7 @@
 
 #include <ctiprd/util/ops.h>
 #include <ctiprd/util/hash.h>
+#include <ctiprd/util/pbc.h>
 #include <ctiprd/reactions/doi.h>
 
 namespace ctiprd::cpu::reactions::impl {

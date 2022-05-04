@@ -323,8 +323,9 @@ private:
     std::vector<size_type> blanks;
 };
 
-template<typename System, typename ParticleCollection>
+template<typename T, typename ParticleCollection>
 struct ParticleCollectionUpdater {
+    using System = T;
     using Particles = ParticleCollection;
     using ParticleType = typename ParticleCollection::ParticleType;
     using Position = typename ParticleCollection::Position;

@@ -49,7 +49,7 @@ struct ForceField {
         }
 
         if constexpr(nExternalPotentials > 0 || nPairPotentials > 0) {
-            auto worker = [
+            const auto worker = [
                     &pot = externalPotentials_,
                     &potPair = pairPotentials_,
                     nl = neighborList_.get(),

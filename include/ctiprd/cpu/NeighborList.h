@@ -144,7 +144,7 @@ public:
         std::fill(std::begin(head), std::end(head), thread::copyable_atomic<std::size_t>());
         auto updateOp = [this](std::size_t particleId, const auto &pos, const auto &type, const auto&/*noe*/) {
             if(isAllowedType(type)) {
-                auto boxId = positionToBoxIx(&pos.data[0]);
+                const auto boxId = positionToBoxIx(&pos.data[0]);
 
                 // CAS
                 auto &atomic = *head.at(boxId);
@@ -154,7 +154,7 @@ public:
             }
         };
 
-        auto futures = collection->forEachParticle(updateOp, pool);
+        const auto futures = collection->forEachParticle(updateOp, pool);
         for(const auto &f : futures) f.wait();
     }
 
@@ -170,8 +170,7 @@ public:
     }
 
     std::uint32_t positionToBoxIx(const dtype *pos) const {
-        auto boxId = _index.index(gridPos(pos));
-        return boxId;
+        return _index.index(gridPos(pos));
     }
 
     template<typename T>
@@ -195,13 +194,13 @@ public:
     template<typename F, typename PoolPtr>
     std::vector<std::future<void>> forEachCell(F &&f, PoolPtr pool) const {
         std::vector<std::future<void>> futures;
-        auto worker = [op = std::forward<F>(f)](auto begin, auto end) {
+        const auto worker = [op = std::forward<F>(f)](auto begin, auto end) {
             for(auto i = begin; i != end; ++i) {
                 op(i);
             }
         };
-        auto granularity = config::threadGranularity(pool);
-        auto grainSize = nCellsTotal() / granularity;
+        const auto granularity = config::threadGranularity(pool);
+        const auto grainSize = nCellsTotal() / granularity;
         std::size_t i {};
         for (i = 0; i < granularity - 1; ++i) {
             futures.emplace_back(pool->push(worker, i*grainSize, (i+1) * grainSize));
@@ -226,10 +225,10 @@ public:
         auto particleId = (*head.at(cellIndex)).load();
         while (particleId != 0) {
             for(std::size_t d = 0; d < DIM; ++d) {
-                auto begin = _adjacency.cellsBegin(cellIndex);
-                auto end = _adjacency.cellsEnd(cellIndex);
+                const auto begin = _adjacency.cellsBegin(cellIndex);
+                const auto end = _adjacency.cellsEnd(cellIndex);
                 for (auto k = begin; k != end; ++k) {
-                    auto neighborCellId = *k;
+                    const auto neighborCellId = *k;
                     auto neighborId = (*head.at(neighborCellId)).load();
                     while (neighborId != 0) {
                         if constexpr(all) {
@@ -255,28 +254,23 @@ public:
     template<typename ParticleCollection, typename F>
     void forEachNeighbor(std::size_t id, ParticleCollection &collection, F &&fun) const {
         const auto &pos = collection.position(id);
-        auto gridPos = this->gridPos(&pos[0]);
-        for (int i = 0u; i < DIM; ++i) {
-            auto begin = cellNeighborsBegin(gridPos, i);
-            auto end = cellNeighborsEnd(gridPos, i);
-
-            typename Index::GridDims cellPos {gridPos};
-            for (auto k = begin; k != end; k = periodic ? (k + 1) % _index[i] : k + 1) {
-                cellPos[i] = k;
-
-                if (cellPos != gridPos) {
-                    auto cellId = _index.index(cellPos);
-                    auto neighborId = (*head.at(cellId)).load();
-                    while (neighborId != 0) {
-                        fun(neighborId, collection.position(neighborId), collection.typeOf(neighborId),
-                            collection.force(neighborId));
-                        neighborId = list.at(neighborId);
-                    }
+        const auto gridPos = this->gridPos(&pos[0]);
+        const auto gridId = _index.index(gridPos);
+        const auto begin = _adjacency.cellsBegin(gridId);
+        const auto end = _adjacency.cellsEnd(gridId);
+        for (auto k = begin; k != end; ++k) {
+            const auto neighborCellId = *k;
+            if (neighborCellId != gridId) {
+                auto neighborId = (*head.at(neighborCellId)).load();
+                while (neighborId != 0) {
+                    fun(neighborId, collection.position(neighborId), collection.typeOf(neighborId),
+                        collection.force(neighborId));
+                    neighborId = list.at(neighborId);
                 }
             }
         }
         {
-            auto boxId = positionToBoxIx(&pos[0]);
+            const auto boxId = positionToBoxIx(&pos[0]);
             auto neighborId = (*head.at(boxId)).load();
             while (neighborId != 0) {
                 if (neighborId != id) {
