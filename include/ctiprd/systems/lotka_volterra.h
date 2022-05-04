@@ -40,7 +40,7 @@ struct LotkaVolterra {
     using Cfg = Conf<T>;
     using dtype = T;
     static constexpr std::size_t DIM = 3;
-    static constexpr std::array<T, DIM> boxSize{5., 5., 5.};
+    static constexpr std::array<T, DIM> boxSize{10., 10., 10.};
     static constexpr bool periodic = true;
     static constexpr T kBT = 2.43614;
     static constexpr ParticleTypes<dtype, 2> types{{
