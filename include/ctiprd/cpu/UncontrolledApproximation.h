@@ -51,10 +51,10 @@ struct UncontrolledApproximation {
         std::tie(reactionsO2, backingO2) = reactions::impl::generateMapO2<Updater>(system);
 
         std::unordered_set<std::size_t> neighborListTypes {};
-        for(const auto &e : reactionsO2) {
-            if(!e.second.empty()) {
-                neighborListTypes.emplace(std::get<0>(e.first));
-                neighborListTypes.emplace(std::get<1>(e.first));
+        for(const auto &reactionElement : reactionsO2) {
+            if(!reactionElement.second.empty()) {
+                neighborListTypes.emplace(std::get<0>(reactionElement.first));
+                neighborListTypes.emplace(std::get<1>(reactionElement.first));
             }
         }
         neighborList_->setTypes(neighborListTypes);
@@ -74,16 +74,16 @@ struct UncontrolledApproximation {
         std::vector<ReactionEvent> events;
         {
             {
-                const auto worker = [this, &system, tau, nl = neighborList_.get(), data = particles.get(), &events, &mutex](
-                        auto id, typename ParticleCollection::Position &pos,
+                const auto worker = [this, &system, tau, neighborList = neighborList_.get(), data = particles.get(), &events, &mutex](
+                        const auto particleId, typename ParticleCollection::Position &pos,
                         const typename ParticleCollection::ParticleType &type,
-                        typename ParticleCollection::Force &force
+                        const auto &/*ignore*/
                 ) {
                     std::vector<ReactionEvent> localEvents;
                     const auto &reactions = reactionsO1[type];
                     for (std::size_t i = 0; i < reactions.size(); ++i) {
                         if (reactions[i]->shouldPerform(tau, pos, type)) {
-                            localEvents.emplace_back(1, id, id, i, type, 0);
+                            localEvents.push_back({1, particleId, particleId, i, type, 0});
                         }
                     }
 
@@ -94,25 +94,25 @@ struct UncontrolledApproximation {
                     }
                 };
 
-                auto f = particles->forEachParticle(worker, pool);
-                std::move(begin(f), end(f), std::back_inserter(futures));
+                auto fun = particles->forEachParticle(worker, pool);
+                std::move(begin(fun), end(fun), std::back_inserter(futures));
             }
 
             if constexpr(nReactionsO2 > 0) {
                 const auto that = this;
-                auto worker = [that, tau, &data = *particles, &mutex, &events](const auto &cellIndex) {
+                const auto worker = [that, tau, &data = *particles, &mutex, &events](const auto &cellIndex) {
                     std::vector<ReactionEvent> localEvents;
 
                     that->neighborList_->template forEachNeighborInCell<false>([that, tau, &localEvents, &data](const auto &id1, const auto &id2) {
                         const auto type1 = data.typeOf(id1);
                         const auto type2 = data.typeOf(id2);
-                        const auto &p1 = data.positionOf(id1);
-                        const auto &p2 = data.positionOf(id2);
+                        const auto &position1 = data.positionOf(id1);
+                        const auto &position2 = data.positionOf(id2);
 
                         const auto &reactions = that->reactionsO2[{type1, type2}];
                         for (std::size_t i = 0; i < reactions.size(); ++i) {
-                            if (reactions[i]->shouldPerform(tau, p1, type1, p2, type2)) {
-                                localEvents.emplace_back(2, id1, id2, i, type1, type2);
+                            if (reactions[i]->shouldPerform(tau, position1, type1, position2, type2)) {
+                                localEvents.push_back({2, id1, id2, i, type1, type2});
                             }
                         }
                     }, cellIndex);
@@ -123,11 +123,11 @@ struct UncontrolledApproximation {
                         events.insert(end(events), begin(localEvents), end(localEvents));
                     }
                 };
-                auto f = neighborList_->forEachCell(worker, pool);
-                std::move(begin(f), end(f), std::back_inserter(futures));
+                auto cellFutures = neighborList_->forEachCell(worker, pool);
+                std::move(begin(cellFutures), end(cellFutures), std::back_inserter(futures));
             }
         }
-        for (auto &f : futures) f.wait();
+        for (auto &future : futures) { future.wait(); }
 
         {
             std::shuffle(begin(events), end(events), rnd::staticThreadLocalGenerator<Generator>());
@@ -147,7 +147,6 @@ struct UncontrolledApproximation {
                     }
                 }
             }
-
         }
         if constexpr(nReactionsO2 > 0) {
             particles->sort();
