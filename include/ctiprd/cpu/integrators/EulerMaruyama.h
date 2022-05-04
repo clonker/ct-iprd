@@ -45,14 +45,14 @@ public:
         return particles_;
     }
 
-    void step(double h) {
+    void step(double stepSize) {
 
-        if(prevIntegrationStep != h) {
-            prevIntegrationStep = h;
+        if(prevIntegrationStep != stepSize) {
+            prevIntegrationStep = stepSize;
 
             for(auto i = 0; i < Info::nTypes; ++i) {
-                randomDisplacementPrefactors[i] = std::sqrt(2 * Info::diffusionConstantOf(i) * h);
-                deterministicDisplacementPrefactors[i] = Info::diffusionConstantOf(i) * h / System::kBT;
+                randomDisplacementPrefactors[i] = std::sqrt(2 * Info::diffusionConstantOf(i) * stepSize);
+                deterministicDisplacementPrefactors[i] = Info::diffusionConstantOf(i) * stepSize / System::kBT;
             }
         }
 
@@ -60,7 +60,7 @@ public:
             forceField->forces(particles_, pool_);
         }
 
-        auto worker = [this]
+        const auto worker = [this]
                 (const auto &, typename Particles::Position &pos, const typename Particles::ParticleType &type,
                  const typename Particles::Force &force) {
             pos += force * deterministicDisplacementPrefactors[type] + noise() * randomDisplacementPrefactors[type];
@@ -73,13 +73,15 @@ public:
         }
 
         if constexpr(Info::hasReactions()) {
-            reactions->reactions(system, h, particles_, pool_);
+            reactions->reactions(system, stepSize, particles_, pool_);
 
             if constexpr(Info::periodic) {
-                auto fut = particles_->forEachParticle([](const auto &, auto &pos, const auto &, const auto &) {
+                const auto fut = particles_->forEachParticle([](const auto &, auto &pos, const auto &, const auto &) {
                     util::pbc::wrapPBC<System>(pos);
                 }, pool_);
-                for(auto &f : fut) f.wait();
+                for(auto &future : fut) {
+                    future.wait();
+                }
             }
         }
     }
