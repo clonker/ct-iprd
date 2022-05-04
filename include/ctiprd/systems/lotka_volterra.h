@@ -37,7 +37,7 @@ struct Conf {
 
 template<typename T>
 struct LotkaVolterra {
-    using Conf = Conf<T>;
+    using Cfg = Conf<T>;
     using dtype = T;
     static constexpr std::size_t DIM = 2;
     static constexpr std::array<T, DIM> boxSize{10., 10.};
@@ -46,11 +46,11 @@ struct LotkaVolterra {
     static constexpr ParticleTypes<dtype, 2> types{{
               {
                       .name = "predator",
-                      .diffusionConstant = Conf::diffPred
+                      .diffusionConstant = Cfg::diffPred
               },
               {
                       .name = "prey",
-                      .diffusionConstant = Conf::diffPrey
+                      .diffusionConstant = Cfg::diffPrey
               },
     }};
     static constexpr std::size_t preyId = particleTypeId<types>("prey");
@@ -63,12 +63,12 @@ struct LotkaVolterra {
                     .eductType = preyId,
                     .productType1 = preyId,
                     .productType2 = preyId,
-                    .productDistance = Conf::alphaDistance,
-                    .rate = Conf::alpha
+                    .productDistance = Cfg::alphaDistance,
+                    .rate = Cfg::alpha
             };
             death = reactions::doi::Decay<T>{
                     .eductType = predatorId,
-                    .rate = Conf::gamma
+                    .rate = Cfg::gamma
             };
         }
         {
@@ -77,22 +77,22 @@ struct LotkaVolterra {
                     .eductType1 = preyId,
                     .eductType2 = preyId,
                     .productType = preyId,
-                    .reactionRadius = Conf::frictionRadius,
-                    .rate = Conf::frictionMic
+                    .reactionRadius = Cfg::frictionRadius,
+                    .rate = Cfg::frictionMic
             };
             predatorSocialFriction = reactions::doi::Fusion<T>{
                     .eductType1 = predatorId,
                     .eductType2 = predatorId,
                     .productType = predatorId,
-                    .reactionRadius = Conf::frictionRadius,
-                    .rate = Conf::frictionMic
+                    .reactionRadius = Cfg::frictionRadius,
+                    .rate = Cfg::frictionMic
             };
             predEatsPrey = reactions::doi::Catalysis<T>{
                     .catalyst = predatorId,
                     .eductType = preyId,
                     .productType = predatorId,
-                    .reactionRadius = Conf::betaRadius,
-                    .rate = Conf::betaMic
+                    .reactionRadius = Cfg::betaRadius,
+                    .rate = Cfg::betaMic
             };
         }
 
@@ -100,19 +100,19 @@ struct LotkaVolterra {
         {
             static constexpr dtype eps = 1e-5;
 
-            auto kmac = rates::macroscopicRate(Conf::betaMic, types[preyId].diffusionConstant,
-                                               types[predatorId].diffusionConstant, Conf::betaRadius);
-            if(std::abs(kmac - Conf::beta) > eps) {
-                throw std::runtime_error(fmt::format("kmac = {}, beta = {}", kmac, Conf::beta));
+            auto kmac = rates::macroscopicRate(Cfg::betaMic, types[preyId].diffusionConstant,
+                                               types[predatorId].diffusionConstant, Cfg::betaRadius);
+            if(std::abs(kmac - Cfg::beta) > eps) {
+                throw std::runtime_error(fmt::format("kmac = {}, beta = {}", kmac, Cfg::beta));
             }
         }
         {
             static constexpr dtype eps = 1e-5;
 
-            auto kmac = rates::macroscopicRate(Conf::frictionMic, types[preyId].diffusionConstant,
-                                               types[predatorId].diffusionConstant, Conf::frictionRadius);
-            if(std::abs(kmac - Conf::friction) > eps) {
-                throw std::runtime_error(fmt::format("kmac = {}, friction = {}", kmac, Conf::friction));
+            auto kmac = rates::macroscopicRate(Cfg::frictionMic, types[preyId].diffusionConstant,
+                                               types[predatorId].diffusionConstant, Cfg::frictionRadius);
+            if(std::abs(kmac - Cfg::friction) > eps) {
+                throw std::runtime_error(fmt::format("kmac = {}, friction = {}", kmac, Cfg::friction));
             }
         }
         {/*
