@@ -266,18 +266,8 @@ public:
         const auto end = _adjacency.cellsEnd(gridId);
         for (auto k = begin; k != end; ++k) {
             const auto neighborCellId = *k;
-            if (neighborCellId != gridId) {
-                auto neighborId = (*head.at(neighborCellId)).load();
-                while (neighborId != 0) {
-                    fun(neighborId, collection.position(neighborId), collection.typeOf(neighborId),
-                        collection.force(neighborId));
-                    neighborId = list.at(neighborId);
-                }
-            }
-        }
-        {
-            const auto boxId = positionToBoxIx(pos[0]);
-            auto neighborId = (*head.at(boxId)).load();
+
+            auto neighborId = (*head.at(neighborCellId)).load();
             while (neighborId != 0) {
                 if (neighborId != particleId) {
                     fun(neighborId, collection.position(neighborId), collection.typeOf(neighborId),
