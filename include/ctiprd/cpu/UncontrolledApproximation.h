@@ -74,7 +74,7 @@ struct UncontrolledApproximation {
         std::vector<ReactionEvent> events;
         {
             {
-                auto worker = [this, &system, tau, nl = neighborList_.get(), data = particles.get(), &events, &mutex](
+                const auto worker = [this, &system, tau, nl = neighborList_.get(), data = particles.get(), &events, &mutex](
                         auto id, typename ParticleCollection::Position &pos,
                         const typename ParticleCollection::ParticleType &type,
                         typename ParticleCollection::Force &force
@@ -88,7 +88,7 @@ struct UncontrolledApproximation {
                     }
 
                     {
-                        std::scoped_lock lock{mutex};
+                        const std::scoped_lock lock{mutex};
                         events.reserve(events.size() + localEvents.size());
                         events.insert(end(events), begin(localEvents), end(localEvents));
                     }
@@ -99,13 +99,13 @@ struct UncontrolledApproximation {
             }
 
             if constexpr(nReactionsO2 > 0) {
-                auto that = this;
+                const auto that = this;
                 auto worker = [that, tau, &data = *particles, &mutex, &events](const auto &cellIndex) {
                     std::vector<ReactionEvent> localEvents;
 
                     that->neighborList_->template forEachNeighborInCell<false>([that, tau, &localEvents, &data](const auto &id1, const auto &id2) {
-                        auto type1 = data.typeOf(id1);
-                        auto type2 = data.typeOf(id2);
+                        const auto type1 = data.typeOf(id1);
+                        const auto type2 = data.typeOf(id2);
                         const auto &p1 = data.positionOf(id1);
                         const auto &p2 = data.positionOf(id2);
 

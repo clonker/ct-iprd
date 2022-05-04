@@ -27,11 +27,11 @@ struct LotkaVolterra {
     static constexpr ParticleTypes<dtype, 2> types{{
               {
                       .name = "predator",
-                      .diffusionConstant = 1.
+                      .diffusionConstant = 10.
               },
               {
                       .name = "prey",
-                      .diffusionConstant = 1.
+                      .diffusionConstant = 10.
               },
     }};
     static constexpr std::size_t preyId = particleTypeId<types>("prey");
