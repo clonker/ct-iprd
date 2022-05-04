@@ -22,10 +22,10 @@ struct CellAdjacency {
     static_assert(std::is_signed_v<typename Index::value_type>, "Needs index to be signed!");
 
     bool withinBounds(const Index &index, const typename Index::GridDims &ijk) const {
-        bool nonNegative = std::all_of(begin(ijk), end(ijk), [](const auto &x) { return x >= 0; });
+        const bool nonNegative = std::all_of(begin(ijk), end(ijk), [](const auto &element) { return element >= 0; });
         bool nonExceeding = true;
-        for(std::size_t d = 0; d < Index::Dims; ++d) {
-            nonExceeding &= ijk[d] < index[d];
+        for(std::size_t dim = 0; dim < Index::Dims; ++dim) {
+            nonExceeding &= ijk[dim] < index[dim];
         }
         return nonNegative && nonExceeding;
     }
@@ -49,13 +49,13 @@ struct CellAdjacency {
         }
     }
     CellAdjacency() = default;
-    CellAdjacency(const Index &index, std::int32_t r) {
+    CellAdjacency(const Index &index, const std::int32_t radius) {
         typename Index::GridDims nNeighbors {};
         for (std::size_t i = 0; i < Index::Dims; ++i) {
-            nNeighbors[i] = std::min(index[i], static_cast<decltype(index[i])>(2 * r + 1));
+            nNeighbors[i] = std::min(index[i], static_cast<decltype(index[i])>(2 * radius + 1));
         }
         // number of neighbors plus the cell itself
-        auto nAdjacentCells = 1 + std::accumulate(begin(nNeighbors), end(nNeighbors), 1, std::multiplies<>());
+        const auto nAdjacentCells = 1 + std::accumulate(begin(nNeighbors), end(nNeighbors), 1, std::multiplies<>());
         // number of neighbors plus cell itself plus padding to save how many neighbors actually
         cellNeighbors = util::Index<2>{std::array<typename Index::value_type, 2>{index.size(), static_cast<typename Index::value_type>(1 + nAdjacentCells)}};
         cellNeighborsContent.resize(cellNeighbors.size());
@@ -64,12 +64,12 @@ struct CellAdjacency {
         adj.reserve(1 + nAdjacentCells);
         for(std::size_t i = 0; i < index.size(); ++i) {
             adj.resize(0);
-            auto ijk = index.inverse(i);
-            findEachAdjCell(index, ijk, Index::Dims - 1, r, adj);
+            const auto ijk = index.inverse(i);
+            findEachAdjCell(index, ijk, Index::Dims - 1, radius, adj);
             std::sort(adj.begin(), adj.end());
             adj.erase(std::unique(std::begin(adj), std::end(adj)), std::end(adj));
 
-            auto begin = cellNeighbors(i, 0);
+            const auto begin = cellNeighbors(i, 0);
             cellNeighborsContent[begin] = adj.size();
             std::copy(adj.begin(), adj.end(), &cellNeighborsContent.at(begin + 1));
         }
@@ -80,6 +80,8 @@ struct CellAdjacency {
 
     CellAdjacency(CellAdjacency&&) noexcept = default;
     CellAdjacency &operator=(CellAdjacency&&) noexcept = default;
+
+    ~CellAdjacency() = default;
 
     [[nodiscard]] auto nNeighbors(auto cellIndex) const {
         return cellNeighborsContent[cellNeighbors(cellIndex, 0)];
@@ -108,7 +110,9 @@ public:
         std::array<typename Index::value_type, DIM> nCells;
         for (int i = 0; i < DIM; ++i) {
             _cellSize[i] = interactionRadius / nSubdivides;
-            if (gridSize[i] <= 0) throw std::invalid_argument("grid sizes must be positive.");
+            if (gridSize[i] <= 0) {
+                throw std::invalid_argument("grid sizes must be positive.");
+            }
             nCells[i] = gridSize[i] / _cellSize[i];
         }
         _index = Index(nCells);
@@ -155,12 +159,14 @@ public:
         };
 
         const auto futures = collection->forEachParticle(updateOp, pool);
-        for(const auto &f : futures) f.wait();
+        for(const auto &future : futures) {
+            future.wait();
+        }
     }
 
     typename Index::GridDims gridPos(const dtype *pos) const {
         typename Index::GridDims projections;
-        for (auto i = 0u; i < DIM; ++i) {
+        for (auto i = 0U; i < DIM; ++i) {
             projections[i] = static_cast<typename Index::value_type>(
                     std::max(static_cast<dtype>(0.), static_cast<dtype>(std::floor((pos[i] + .5 * _gridSize[i]) / _cellSize[i]))));
             projections[i] = std::clamp(projections[i], static_cast<typename Index::value_type>(0),
@@ -192,21 +198,21 @@ public:
     }
 
     template<typename F, typename PoolPtr>
-    std::vector<std::future<void>> forEachCell(F &&f, PoolPtr pool) const {
+    std::vector<std::future<void>> forEachCell(F &&func, PoolPtr pool) const {
         std::vector<std::future<void>> futures;
-        const auto worker = [op = std::forward<F>(f)](auto begin, auto end) {
+        const auto worker = [operation = std::forward<F>(func)](auto begin, auto end) {
             for(auto i = begin; i != end; ++i) {
-                op(i);
+                operation(i);
             }
         };
         const auto granularity = config::threadGranularity(pool);
         const auto grainSize = nCellsTotal() / granularity;
-        std::size_t i {};
-        for (i = 0; i < granularity - 1; ++i) {
-            futures.emplace_back(pool->push(worker, i*grainSize, (i+1) * grainSize));
+        std::size_t grainStep {};
+        for (grainStep = 0; grainStep < granularity - 1; ++grainStep) {
+            futures.emplace_back(pool->push(worker, grainStep * grainSize, (grainStep + 1) * grainSize));
         }
-        if(i*grainSize != nCellsTotal()) {
-            futures.emplace_back(pool->push(worker, i*grainSize, nCellsTotal()));
+        if(grainStep * grainSize != nCellsTotal()) {
+            futures.emplace_back(pool->push(worker, grainStep * grainSize, nCellsTotal()));
         }
         return futures;
     }
@@ -216,32 +222,30 @@ public:
     }
 
     template<typename F>
-    void forEachNeighborInCell(F &&f, const typename Index::GridDims &cellIndex) const {
-        forEachNeighborInCell(std::forward<F>(f), _index(cellIndex));
+    void forEachNeighborInCell(F &&func, const typename Index::GridDims &cellIndex) const {
+        forEachNeighborInCell(std::forward<F>(func), _index(cellIndex));
     }
 
     template<bool all, typename F>
-    void forEachNeighborInCell(F &&f, typename Index::value_type cellIndex) const {
+    void forEachNeighborInCell(F &&func, typename Index::value_type cellIndex) const {
         auto particleId = (*head.at(cellIndex)).load();
         while (particleId != 0) {
-            for(std::size_t d = 0; d < DIM; ++d) {
-                const auto begin = _adjacency.cellsBegin(cellIndex);
-                const auto end = _adjacency.cellsEnd(cellIndex);
-                for (auto k = begin; k != end; ++k) {
-                    const auto neighborCellId = *k;
-                    auto neighborId = (*head.at(neighborCellId)).load();
-                    while (neighborId != 0) {
-                        if constexpr(all) {
-                            if(neighborId != particleId) {
-                                f(particleId, neighborId);
-                            }
-                        } else {
-                            if (neighborId > particleId) {
-                                f(particleId, neighborId);
-                            }
+            const auto begin = _adjacency.cellsBegin(cellIndex);
+            const auto end = _adjacency.cellsEnd(cellIndex);
+            for (auto k = begin; k != end; ++k) {
+                const auto neighborCellId = *k;
+                auto neighborId = (*head.at(neighborCellId)).load();
+                while (neighborId != 0) {
+                    if constexpr(all) {
+                        if(neighborId != particleId) {
+                            func(particleId, neighborId);
                         }
-                        neighborId = list.at(neighborId);
+                    } else {
+                        if (neighborId > particleId) {
+                            func(particleId, neighborId);
+                        }
                     }
+                    neighborId = list.at(neighborId);
                 }
             }
 
@@ -252,8 +256,8 @@ public:
 
 
     template<typename ParticleCollection, typename F>
-    void forEachNeighbor(std::size_t id, ParticleCollection &collection, F &&fun) const {
-        const auto &pos = collection.position(id);
+    void forEachNeighbor(std::size_t particleId, ParticleCollection &collection, F &&fun) const {
+        const auto &pos = collection.position(particleId);
         const auto gridPos = this->gridPos(&pos[0]);
         const auto gridId = _index.index(gridPos);
         const auto begin = _adjacency.cellsBegin(gridId);
@@ -273,7 +277,7 @@ public:
             const auto boxId = positionToBoxIx(&pos[0]);
             auto neighborId = (*head.at(boxId)).load();
             while (neighborId != 0) {
-                if (neighborId != id) {
+                if (neighborId != particleId) {
                     fun(neighborId, collection.position(neighborId), collection.typeOf(neighborId),
                         collection.force(neighborId));
                 }
