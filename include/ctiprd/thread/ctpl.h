@@ -156,8 +156,9 @@ public:
             }
             this->clear_queue();  // empty the queue
         } else {
-            if (this->isDone || this->isStop)
+            if (this->isDone || this->isStop) {
                 return;
+            }
             this->isDone = true;  // give the waiting threads a command to finish
         }
         {
@@ -177,9 +178,9 @@ public:
     }
 
     template<typename F, typename... Rest>
-    auto push(F && f, Rest&&... rest) ->std::future<decltype(f(rest...))> {
-        auto pck = std::make_shared<std::packaged_task<decltype(f(rest...))()>>(
-                std::bind(std::forward<F>(f), std::forward<Rest>(rest)...)
+    auto push(F && func, Rest&&... rest) ->std::future<decltype(func(rest...))> {
+        auto pck = std::make_shared<std::packaged_task<decltype(func(rest...))()>>(
+                std::bind(std::forward<F>(func), std::forward<Rest>(rest)...)
         );
         auto _f = new std::function<void()>([pck]() {
             (*pck)();
@@ -193,9 +194,9 @@ public:
     // run the user's function that excepts argument int - id of the running thread. returned value is templatized
     // operator returns std::future, where the user can get the result and rethrow the catched exceptins
     template<typename F>
-    auto push(F && f) ->std::future<decltype(f())> {
-        auto pck = std::make_shared<std::packaged_task<decltype(f())()>>(std::forward<F>(f));
-        auto _f = new std::function<void()>([pck]() {
+    auto push(F && func) ->std::future<decltype(func())> {
+        auto pck = std::make_shared<std::packaged_task<decltype(func())()>>(std::forward<F>(func));
+        auto* _f = new std::function<void()>([pck]() {
             (*pck)();
         });
         this->q.push(_f);
@@ -207,9 +208,9 @@ public:
 
 private:
 
-    void set_thread(int i) {
-        std::shared_ptr<std::atomic<bool>> flag(this->flags[i]); // a copy of the shared ptr to the flag
-        auto f = [this, i, flag/* a copy of the shared ptr to the flag */]() {
+    void set_thread(int threadIndex) {
+        std::shared_ptr<std::atomic<bool>> flag(this->flags[threadIndex]); // a copy of the shared ptr to the flag
+        auto f = [this, flag/* a copy of the shared ptr to the flag */]() {
             std::atomic<bool> & _flag = *flag;
             std::function<void()> * _f;
             bool isPop = this->q.pop(_f);
@@ -217,21 +218,23 @@ private:
                 while (isPop) {  // if there is anything in the queue
                     std::unique_ptr<std::function<void()>> func(_f); // at return, delete the function even if an exception occurred
                     (*_f)();
-                    if (_flag)
+                    if (_flag) {
                         return;  // the thread is wanted to stop, return even if the queue is not empty yet
-                    else
+                    } else {
                         isPop = this->q.pop(_f);
+                    }
                 }
                 // the queue is empty here, wait for the next command
                 std::unique_lock<std::mutex> lock(this->mutex);
                 ++this->nWaiting;
                 this->cv.wait(lock, [this, &_f, &isPop, &_flag](){ isPop = this->q.pop(_f); return isPop || this->isDone || _flag; });
                 --this->nWaiting;
-                if (!isPop)
+                if (!isPop) {
                     return;  // if the queue is empty and this->isDone == true or *flag then return
+                }
             }
         };
-        this->threads[i] = std::make_unique<std::thread>(f); // compiler may not support std::make_unique()
+        this->threads[threadIndex] = std::make_unique<std::thread>(f);
     }
 
     void init() { this->nWaiting = 0; this->isStop = false; this->isDone = false; }

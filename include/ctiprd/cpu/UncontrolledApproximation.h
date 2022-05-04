@@ -149,7 +149,7 @@ struct UncontrolledApproximation {
             }
         }
         if constexpr(nReactionsO2 > 0) {
-            // particles->sort();
+            particles->sort();
         }
     }
 

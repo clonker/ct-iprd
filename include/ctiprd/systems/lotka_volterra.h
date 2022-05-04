@@ -27,11 +27,11 @@ struct LotkaVolterra {
     static constexpr ParticleTypes<dtype, 2> types{{
               {
                       .name = "predator",
-                      .diffusionConstant = 1.
+                      .diffusionConstant = .01
               },
               {
                       .name = "prey",
-                      .diffusionConstant = 1.
+                      .diffusionConstant = .01
               },
     }};
     static constexpr std::size_t preyId = particleTypeId<types>("prey");
@@ -59,21 +59,21 @@ struct LotkaVolterra {
                     .eductType2 = preyId,
                     .productType = preyId,
                     .reactionRadius = 0.5,
-                    .rate = 0.019116848082565446
+                    .rate = 0.021112150996294498
             };
             predatorSocialFriction = reactions::doi::Fusion<T>{
                     .eductType1 = predatorId,
                     .eductType2 = predatorId,
                     .productType = predatorId,
                     .reactionRadius = 0.5,
-                    .rate = 0.019116848082565446
+                    .rate = 0.021112150996294498
             };
             predEatsPrey = reactions::doi::Catalysis<T>{
                     .catalyst = predatorId,
                     .eductType = preyId,
                     .productType = predatorId,
                     .reactionRadius = 0.5,
-                    .rate = 0.09595107151845629
+                    .rate = 0.18112696641998566
             };
         }
         {/*
