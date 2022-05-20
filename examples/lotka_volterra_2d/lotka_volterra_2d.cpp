@@ -26,7 +26,7 @@ struct Conf {
     static constexpr T diffPred = 0.01;
 
     static constexpr T alpha = 2.;  // birth: prey -> prey + prey
-    static constexpr T alphaDistance = .5;  // birth distance
+    static constexpr T alphaDistance = .85;  // birth distance
     static constexpr T beta = 0.05;  // eat: prey + pred -> pred + pred
     static constexpr T betaRadius = 0.25;
     static constexpr T betaMic = 7.670679846561291;
@@ -131,13 +131,13 @@ struct LotkaVolterra2d {
         {
             auto &[preyWall, predWall] = pairPotentials;
 
-            preyWall.cutoff = .3;
-            preyWall.forceConstant = 50.;
+            preyWall.cutoff = 1.5;
+            preyWall.forceConstant = 150.;
             preyWall.particleType1 = wallId;
             preyWall.particleType2 = preyId;
 
-            predWall.cutoff = .3;
-            predWall.forceConstant = 50.;
+            predWall.cutoff = 1.5;
+            predWall.forceConstant = 150.;
             predWall.particleType1 = wallId;
             predWall.particleType2 = predatorId;
         }
