@@ -40,7 +40,7 @@ struct LotkaVolterra {
     using Cfg = Conf<T>;
     using dtype = T;
     static constexpr std::size_t DIM = 2;
-    static constexpr std::array<T, DIM> boxSize{5., 5.};
+    static constexpr std::array<T, DIM> boxSize{10., 50.};
     static constexpr bool periodic = true;
     static constexpr T kBT = 2.43614;
     static constexpr ParticleTypes<dtype, 2> types{{
@@ -115,16 +115,16 @@ struct LotkaVolterra {
                 throw std::runtime_error(fmt::format("kmac = {}, friction = {}", kmac, Cfg::friction));
             }
         }
-        {/*
+        {
             auto &box = std::get<0>(externalPotentials);
             box.geometry.v0 = {-4., -24.};
             box.geometry.v1 = {4., 24.};
-            box.k = 50.;
-        */}
+            box.k = 150.;
+        }
     }
 
 
-    using ExternalPotentials = std::tuple<>;  // potentials::external::BoxInclusion<dtype, DIM, true>
+    using ExternalPotentials = std::tuple<potentials::external::BoxInclusion<dtype, DIM, true>>;
     using PairPotentials = std::tuple<>;
 
     using ReactionsO1 = std::tuple<
