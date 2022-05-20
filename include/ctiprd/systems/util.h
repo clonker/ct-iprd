@@ -22,6 +22,7 @@ static constexpr std::size_t particleTypeId(std::string_view name) {
 
 template<typename System>
 struct SystemInfo {
+    using SystemType = System;
     using dtype = typename System::dtype;
     static constexpr bool periodic = System::periodic;
     static constexpr std::size_t DIM = System::DIM;

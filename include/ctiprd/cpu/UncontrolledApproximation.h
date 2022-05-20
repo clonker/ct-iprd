@@ -41,23 +41,23 @@ struct UncontrolledApproximation {
 
     explicit UncontrolledApproximation(const System &system) {
         if constexpr(nReactionsO2 > 0) {
-            if (!neighborList_) {
-                auto cutoff = ctiprd::reactions::reactionRadius<dtype>(system.reactionsO2);
-                neighborList_ = std::make_unique<NeighborList>(System::boxSize, cutoff);
-            }
+            auto cutoff = ctiprd::reactions::reactionRadius<dtype>(system.reactionsO2);
+            neighborList_ = std::make_unique<NeighborList>(System::boxSize, cutoff);
         }
 
         std::tie(reactionsO1, backingO1) = reactions::impl::generateMapO1<Updater>(system);
         std::tie(reactionsO2, backingO2) = reactions::impl::generateMapO2<Updater>(system);
 
-        std::unordered_set<std::size_t> neighborListTypes {};
-        for(const auto &reactionElement : reactionsO2) {
-            if(!reactionElement.second.empty()) {
-                neighborListTypes.emplace(std::get<0>(reactionElement.first));
-                neighborListTypes.emplace(std::get<1>(reactionElement.first));
+        if(neighborList_) {
+            std::unordered_set<std::size_t> neighborListTypes{};
+            for (const auto &reactionElement: reactionsO2) {
+                if (!reactionElement.second.empty()) {
+                    neighborListTypes.emplace(std::get<0>(reactionElement.first));
+                    neighborListTypes.emplace(std::get<1>(reactionElement.first));
+                }
             }
+            neighborList_->setTypes(neighborListTypes);
         }
-        neighborList_->setTypes(neighborListTypes);
     }
 
     template<typename Pool>

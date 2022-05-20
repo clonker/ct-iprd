@@ -94,8 +94,10 @@ public:
 
     using dtype = typename System::dtype;
     static constexpr std::size_t DIM = System::DIM;
+    using SystemType = System;
 
     using Position = Vec<dtype, DIM>;
+    using State = Position;
     using MaybePosition = std::optional<Position>;
     using Force = Vec<dtype, DIM>;
     using Velocity = Vec<dtype, DIM>;

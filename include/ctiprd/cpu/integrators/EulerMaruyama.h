@@ -23,8 +23,8 @@ auto &normalDistribution() {
 }
 
 template<typename System, typename Pool = config::ThreadPool, typename Generator = std::mt19937,
-         typename ForceField = potentials::ForceField<System>,
          typename ParticleCollection = ParticleCollection<System, particles::positions, particles::forces>,
+         typename ForceField = potentials::ForceField<ParticleCollection, System>,
          typename Reactions = UncontrolledApproximation<ParticleCollection, System, Generator>>
 class EulerMaruyama {
 public:
@@ -35,10 +35,8 @@ public:
 
     explicit EulerMaruyama(const System &system, config::PoolPtr<Pool> pool) :
             particles_(std::make_shared<Particles>()), pool_(pool), system(system),
-            forceField(std::make_unique<ForceField>()),
+            forceField(std::make_unique<ForceField>(system)),
             reactions(std::make_unique<Reactions>(system)) {
-        forceField->setExternalPotentials(system.externalPotentials);
-        forceField->setPairPotentials(system.pairPotentials);
     }
 
     std::shared_ptr<Particles> particles() const {

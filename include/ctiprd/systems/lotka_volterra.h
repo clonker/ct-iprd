@@ -124,7 +124,7 @@ struct LotkaVolterra {
     }
 
 
-    using ExternalPotentials = std::tuple<potentials::external::BoxInclusion<dtype, DIM, true>>;
+    using ExternalPotentials = std::tuple<potentials::external::BoxInclusion<dtype, DIM>>;
     using PairPotentials = std::tuple<>;
 
     using ReactionsO1 = std::tuple<

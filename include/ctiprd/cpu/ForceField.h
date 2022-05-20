@@ -16,10 +16,14 @@
 
 #include <ctiprd/cpu/NeighborList.h>
 
+#include "reactions.h"
+#include "forces.h"
+
 namespace ctiprd::cpu::potentials {
 
-template<typename System>
+template<typename ParticleCollection, typename System>
 struct ForceField {
+    using SystemInfo = ctiprd::systems::SystemInfo<System>;
     static constexpr std::size_t DIM = System::DIM;
     using dtype = typename System::dtype;
     using ExternalPotentials = typename System::ExternalPotentials;
@@ -29,59 +33,72 @@ struct ForceField {
     static constexpr int nPairPotentials = std::tuple_size_v<PairPotentials>;
     using NeighborList = nl::NeighborList<DIM, System::periodic, dtype>;
 
-    void setExternalPotentials(const ExternalPotentials &potentials) {
-        externalPotentials_ = potentials;
-    }
-
-    void setPairPotentials(const PairPotentials &potentials) {
-        pairPotentials_ = potentials;
-        neighborList_.reset();
-    }
-
     template<typename Particles, typename Pool>
     void forces(std::shared_ptr<Particles> particles, std::shared_ptr<Pool> pool, bool wait = true) {
         if constexpr(nPairPotentials > 0) {
-            if (!neighborList_) {
-                auto cutoff = ctiprd::potentials::cutoff<dtype>(pairPotentials_);
-                neighborList_ = std::make_unique<NeighborList>(System::boxSize, cutoff);
-            }
             neighborList_->update(particles, pool);
         }
 
         if constexpr(nExternalPotentials > 0 || nPairPotentials > 0) {
             const auto worker = [
-                    &pot = externalPotentials_,
-                    &potPair = pairPotentials_,
+                    &pot = potentialsO1,
+                    &potPair = potentialsO2,
                     nl = neighborList_.get(),
                     &data = *particles
             ]
-                    (auto id, typename Particles::Position &pos, const typename Particles::ParticleType &type,
+                    (const auto &particleId, typename Particles::Position &pos, const typename Particles::ParticleType &type,
                      typename Particles::Force &force) {
 
                 std::fill(begin(force.data), end(force.data), static_cast<dtype>(0));
-                std::apply([&pos, &type, &force](auto &&... args) {
-                    ((force += args.force(pos, type)), ...);
-                }, pot);
+                for(const auto &potentialO1 : pot[type]) {
+                    force += potentialO1->force(pos);
+                }
 
                 if constexpr(nPairPotentials > 0) {
-                    nl->forEachNeighbor(id, data, [&pos, &type, &force, &potPair](auto neighborId, const auto &neighborPos,
-                                                                                  const auto &neighborType,
-                                                                                  const auto &neighborForce) {
-                        std::apply([&pos, &type, &force, &neighborPos, &neighborType](auto &&... args) {
-                            ((force += args.force(pos, type, neighborPos, neighborType)), ...);
-                        }, potPair);
-                    });
+                    if(nl->isAllowedType(type)) {
+                        nl->forEachNeighbor(particleId, data, [&pos, &type, &force, &potPair](auto neighborId, const auto &neighborPos,
+                                                                                              const auto &neighborType,
+                                                                                              const auto &neighborForce) {
+                            for(const auto &potentialO2 : potPair[std::tie(type, neighborType)]) {
+                                force += potentialO2->force(pos, neighborPos);
+                            }
+                        });
+                    }
                 }
             };
             auto futures = particles->forEachParticle(worker, pool);
             if (wait) {
-                for(auto &f : futures) f.wait();
+                for(auto &future : futures)  {
+                    future.wait();
+                }
             }
         }
     }
 
-    ExternalPotentials externalPotentials_;
-    PairPotentials pairPotentials_;
+    explicit ForceField(const System &system) {
+        std::tie(potentialsO1, backingO1) = forces::generateMapO1<ParticleCollection>(system);
+        std::tie(potentialsO2, backingO2) = forces::generateMapO2<ParticleCollection>(system);
+
+        if constexpr(nPairPotentials > 0) {
+            auto cutoff = ctiprd::potentials::cutoff<dtype>(system.pairPotentials);
+            neighborList_ = std::make_unique<NeighborList>(System::boxSize, cutoff);
+
+            std::unordered_set<std::size_t> neighborListTypes{};
+            for (const auto &reactionElement: potentialsO2) {
+                if (!reactionElement.second.empty()) {
+                    neighborListTypes.emplace(std::get<0>(reactionElement.first));
+                    neighborListTypes.emplace(std::get<1>(reactionElement.first));
+                }
+            }
+            neighborList_->setTypes(neighborListTypes);
+        }
+    }
+
+    forces::FFO1Map<ParticleCollection> potentialsO1;
+    forces::FFO1Backing<ParticleCollection> backingO1;
+    forces::FFO2Map<ParticleCollection> potentialsO2;
+    forces::FFO2Backing<ParticleCollection> backingO2;
+
     std::unique_ptr<NeighborList> neighborList_;
 
 };

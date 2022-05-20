@@ -30,6 +30,6 @@ auto shortestDifference(const Position &p1, const Position &p2) {
 template<typename System, typename Position>
 auto dSquared(const Position &p1, const Position &p2) {
     auto diff = shortestDifference<System>(p1, p2);
-    return diff * diff;
+    return diff.normSquared();
 }
 }

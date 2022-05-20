@@ -12,40 +12,19 @@
 
 namespace ctiprd::potentials::pair {
 
-template<typename System, bool allTypes, std::size_t type1=0, std::size_t type2=0>
+template<typename dtype>
 struct HarmonicRepulsion {
-    using dtype = typename System::dtype;
 
-    static constexpr std::size_t particleType1 = type1;
-    static constexpr std::size_t particleType2 = type2;
-
-    template<typename State, typename ParticleType>
-    dtype energy(const State &x1, const ParticleType &t1, const State &x2, const ParticleType &t2) const {
-        if(allTypes || potentialApplicable<HarmonicRepulsion>(t1, t2)) {
-            auto dSquared = ctiprd::util::pbc::dSquared<System>(x1, x2);
-            if (dSquared < cutoff * cutoff) {
-                auto d = std::sqrt(dSquared);
-                d -= cutoff;
-                return static_cast<dtype>(0.5) * d * d * forceConstant;
-            }
-        }
-        return 0;
-    }
-
-    template<typename State, typename ParticleType>
-    State force(const State &x1, const ParticleType &t1, const State &x2, const ParticleType &t2) const {
-        if (allTypes || potentialApplicable<HarmonicRepulsion>(t1, t2)) {
-            auto xij = util::pbc::shortestDifference<System>(x1, x2);
-            auto dSquared = xij.normSquared();
-            if (dSquared < cutoff * cutoff && dSquared > 0) {
-                auto d = std::sqrt(dSquared);
-                return (forceConstant * (d - cutoff)) / d * xij;
-            }
-        }
-        return {};
+    template<typename ParticleType>
+    [[nodiscard]] bool supportsTypes(const ParticleType &type1, const ParticleType &type2) const {
+        return particleType1 == -1 || (type1 == particleType1 && type2 == particleType2) ||
+                (type1 == particleType2 && type2 == particleType1);
     }
 
     dtype cutoff{1.};
     dtype forceConstant{1.};
+
+    int particleType1 {-1};
+    int particleType2 {-1};
 };
 }
