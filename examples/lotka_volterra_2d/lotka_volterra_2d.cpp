@@ -191,9 +191,11 @@ PYBIND11_MODULE(lv2d_mod, m) {
 
     m.def("simulate", [](std::size_t nSteps, float dt, int njobs,
                          const np_array <System::dtype> &prey, const np_array <System::dtype> &predator,
+                         const np_array<System::dtype> &walls,
                          py::handle progressCallback) {
         check_shape(predator);
         check_shape(prey);
+        check_shape(walls);
 
         System system{};
 
@@ -206,6 +208,10 @@ PYBIND11_MODULE(lv2d_mod, m) {
         }
         for (auto i = 0; i < predator.shape(0); ++i) {
             integrator.particles()->addParticle({predator.at(i, 0), predator.at(i, 1)}, "predator");
+        }
+
+        for (auto i = 0; i < walls.shape(0); ++i) {
+            integrator.particles()->addParticle({walls.at(i, 0), walls.at(i, 1)}, "barrier");
         }
 
         {
