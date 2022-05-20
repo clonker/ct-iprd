@@ -26,7 +26,7 @@ struct Conf {
     static constexpr T diffPred = 0.01;
 
     static constexpr T alpha = 2.;  // birth: prey -> prey + prey
-    static constexpr T alphaDistance = 2.;  // birth distance
+    static constexpr T alphaDistance = .02;  // birth distance
     static constexpr T beta = 0.05;  // eat: prey + pred -> pred + pred
     static constexpr T betaRadius = 0.25;
     static constexpr T betaMic = 7.670679846561291;
