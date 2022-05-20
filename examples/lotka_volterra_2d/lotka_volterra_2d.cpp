@@ -131,12 +131,12 @@ struct LotkaVolterra2d {
         {
             auto &[preyWall, predWall] = pairPotentials;
 
-            preyWall.cutoff = 1.5;
+            preyWall.cutoff = 1.;
             preyWall.forceConstant = 150.;
             preyWall.particleType1 = wallId;
             preyWall.particleType2 = preyId;
 
-            predWall.cutoff = 1.5;
+            predWall.cutoff = 1.;
             predWall.forceConstant = 150.;
             predWall.particleType1 = wallId;
             predWall.particleType2 = predatorId;
