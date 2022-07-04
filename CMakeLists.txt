@@ -3,6 +3,11 @@ project(ct-iprd LANGUAGES C CXX VERSION 0.0.0)
 
 set(CMAKE_CXX_STANDARD 20)
 
+include(${CMAKE_SOURCE_DIR}/devtools/cmake/Conan.cmake)
+run_conan()
+include(${CMAKE_CURRENT_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup(TARGETS)
+
 if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     set(CT_IPRD_BUILD_TESTS ON CACHE BOOL "Whether to build the c++ unit tests")
 else()
@@ -24,10 +29,6 @@ endif()
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
 endif()
-include(${CMAKE_SOURCE_DIR}/devtools/cmake/Conan.cmake)
-run_conan()
-include(${CMAKE_CURRENT_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup(TARGETS)
 
 if(MSVC)
     add_compile_options(/W3 /EHsc /bigobj /permissive-)
