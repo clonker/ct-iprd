@@ -90,31 +90,31 @@ TEST_CASE("Test reactions map", "[reactions]") {
     {
         auto[map, backing] = ctiprd::cpu::reactions::impl::generateMapO1<Updater>(system);
         REQUIRE(map[System::aId].size() == 2);
-        REQUIRE(map[System::aId][0]->shouldPerform(1e50, {}, System::aId));
-        REQUIRE(!map[System::aId][0]->shouldPerform(1e50, {}, System::bId));
-        REQUIRE(map[System::aId][1]->shouldPerform(1e50, {}, System::aId));
-        REQUIRE(!map[System::aId][1]->shouldPerform(1e50, {}, System::bId));
+        REQUIRE(map[System::aId][0]->shouldPerform(1e50));
+        REQUIRE(!map[System::aId][0]->shouldPerform(1e50));
+        REQUIRE(map[System::aId][1]->shouldPerform(1e50));
+        REQUIRE(!map[System::aId][1]->shouldPerform(1e50));
 
         REQUIRE(map[System::bId].size() == 2);
-        REQUIRE(map[System::bId][0]->shouldPerform(1e50, {}, System::bId));
-        REQUIRE(!map[System::bId][0]->shouldPerform(1e50, {}, System::aId));
-        REQUIRE(map[System::bId][1]->shouldPerform(1e50, {}, System::bId));
-        REQUIRE(!map[System::bId][1]->shouldPerform(1e50, {}, System::aId));
+        REQUIRE(map[System::bId][0]->shouldPerform(1e50));
+        REQUIRE(!map[System::bId][0]->shouldPerform(1e50));
+        REQUIRE(map[System::bId][1]->shouldPerform(1e50));
+        REQUIRE(!map[System::bId][1]->shouldPerform(1e50));
     }
     {
         auto [map, backing] = ctiprd::cpu::reactions::impl::generateMapO2<Updater>(system);
         REQUIRE(map[std::make_tuple(System::aId, System::aId)].size() == 1);
-        REQUIRE(!map[std::make_tuple(System::aId, System::aId)][0]->shouldPerform(1e50, {}, System::aId, {}, System::bId));
-        REQUIRE(!map[std::make_tuple(System::aId, System::aId)][0]->shouldPerform(1e50, {}, System::bId, {}, System::aId));
-        REQUIRE(!map[std::make_tuple(System::aId, System::aId)][0]->shouldPerform(1e50, {}, System::bId, {}, System::bId));
-        REQUIRE(map[std::make_tuple(System::aId, System::aId)][0]->shouldPerform(1e50, {}, System::aId, {}, System::aId));
+        REQUIRE(!map[std::make_tuple(System::aId, System::aId)][0]->shouldPerform(1e50));
+        REQUIRE(!map[std::make_tuple(System::aId, System::aId)][0]->shouldPerform(1e50));
+        REQUIRE(!map[std::make_tuple(System::aId, System::aId)][0]->shouldPerform(1e50));
+        REQUIRE(map[std::make_tuple(System::aId, System::aId)][0]->shouldPerform(1e50));
 
         REQUIRE(map[std::make_tuple(System::aId, System::bId)].size() == 1);
         REQUIRE(map[std::make_tuple(System::bId, System::aId)].size() == 1);
         REQUIRE(map[std::make_tuple(System::bId, System::aId)] == map[std::make_tuple(System::aId, System::bId)]);
-        REQUIRE(map[std::make_tuple(System::aId, System::bId)][0]->shouldPerform(1e50, {}, System::aId, {}, System::bId));
-        REQUIRE(map[std::make_tuple(System::aId, System::bId)][0]->shouldPerform(1e50, {}, System::bId, {}, System::aId));
-        REQUIRE(!map[std::make_tuple(System::aId, System::bId)][0]->shouldPerform(1e50, {}, System::aId, {}, System::aId));
-        REQUIRE(!map[std::make_tuple(System::aId, System::bId)][0]->shouldPerform(1e50, {}, System::bId, {}, System::bId));
+        REQUIRE(map[std::make_tuple(System::aId, System::bId)][0]->shouldPerform(1e50));
+        REQUIRE(map[std::make_tuple(System::aId, System::bId)][0]->shouldPerform(1e50));
+        REQUIRE(!map[std::make_tuple(System::aId, System::bId)][0]->shouldPerform(1e50));
+        REQUIRE(!map[std::make_tuple(System::aId, System::bId)][0]->shouldPerform(1e50));
     }
 }

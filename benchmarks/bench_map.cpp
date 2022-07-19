@@ -3,6 +3,7 @@
 #include <map>
 #include <unordered_map>
 #include <random>
+#include <array>
 
 #include <benchmark/benchmark.h>
 

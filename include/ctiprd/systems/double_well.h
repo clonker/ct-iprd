@@ -53,6 +53,15 @@ struct DoubleWell {
             fusion.rate = .1;
             fusion.reactionRadius = .1;
         }
+        {
+            auto &[wall1, wall2] = externalPotentials;
+            wall1.particleType = particleTypeId<types>("A");
+            wall2.particleType = particleTypeId<types>("B");
+        }
+        {
+            auto &[repulsion] = pairPotentials;
+            // no need to do anything, everything repulses everything by default
+        }
     }
 
     static constexpr ParticleTypes<dtype, 3> types {{
@@ -67,11 +76,11 @@ struct DoubleWell {
     }};
 
     using ExternalPotentials = std::tuple<
-            potentials::external::DoubleWell<T, false, particleTypeId<types>("A")>,
-            potentials::external::DoubleWell<T, false, particleTypeId<types>("B")>
+            potentials::external::DoubleWell<T>,
+            potentials::external::DoubleWell<T>
     >;
     using PairPotentials = std::tuple<
-            potentials::pair::HarmonicRepulsion<DoubleWell, true>
+            potentials::pair::HarmonicRepulsion<T>
     >;
 
     /*using ReactionsO1 = std::tuple<

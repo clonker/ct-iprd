@@ -8,6 +8,8 @@
 using System = ctiprd::systems::DoubleWell<float>;
 
 TEST_CASE("System sanity", "[system]") {
-    REQUIRE(std::tuple_element_t<0, System::ExternalPotentials>::particleType == 0);
-    REQUIRE(std::tuple_element_t<1, System::ExternalPotentials>::particleType == 1);
+    System system;
+    auto &[pot1, pot2] = system.externalPotentials;
+    REQUIRE(pot1.particleType == 0);
+    REQUIRE(pot2.particleType == 1);
 }
