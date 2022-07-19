@@ -83,10 +83,6 @@ struct DoubleWell {
             potentials::pair::HarmonicRepulsion<T>
     >;
 
-    /*using ReactionsO1 = std::tuple<
-            reactions::doi::Conversion<T>,
-            reactions::doi::Conversion<T>
-    >;*/
     using ReactionsO1 = std::tuple<
             reactions::doi::Conversion<T>,
             reactions::doi::Conversion<T>,

@@ -18,6 +18,7 @@ add_executable(tests catch_main.cpp ${TEST_SRC})
 set_target_properties(tests PROPERTIES CXX_VISIBILITY_PRESET hidden)
 
 target_link_libraries(tests PUBLIC ct-iprd::ct-iprd Catch2::Catch2)
+target_link_libraries(tests PRIVATE Threads::Threads)
 
 add_custom_target(
         run_tests

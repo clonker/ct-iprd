@@ -8,7 +8,7 @@
 #include <ctiprd/cpu/integrators/EulerMaruyama.h>
 
 TEMPLATE_TEST_CASE("Test Integration", "[integration]", ctiprd::systems::DoubleWell<float>, ctiprd::systems::LotkaVolterra<float>) {
-    std::size_t nSteps = 100;
+    std::size_t nSteps = 5;
 
     TestType system {};
     auto pool = ctiprd::config::make_pool(6);
