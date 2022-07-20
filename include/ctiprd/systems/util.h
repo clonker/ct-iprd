@@ -62,4 +62,19 @@ struct SystemInfo {
     }
 };
 
+// todo would be better to do this for System!
+template<typename T>
+concept system_info = requires {
+    { T::SystemType };
+    { T::dtype };
+    { T::periodic } -> std::same_as<bool>;
+    { T::DIM } -> std::same_as<std::size_t>;
+    { T::boxSize };  // todo check for array and dims
+    { T::nTypes } -> std::same_as<std::size_t>;
+    { T::ExternalPotentials };
+    { T::PairPotentials };
+    { T::hasForces } -> std::same_as<bool>;
+    // todo check rest
+};
+
 }

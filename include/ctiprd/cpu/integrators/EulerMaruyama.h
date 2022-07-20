@@ -24,7 +24,7 @@ auto &normalDistribution() {
 
 template<typename System, typename Pool = config::ThreadPool, typename Generator = std::mt19937,
          typename ParticleCollection = ParticleCollection<System, particles::positions, particles::forces>,
-         typename ForceField = potentials::ForceField<ParticleCollection, System>,
+         typename ForceField = potentials::ForceField<ParticleCollection, systems::SystemInfo<System>>,
          typename Reactions = UncontrolledApproximation<ParticleCollection, System, Generator>>
 class EulerMaruyama {
 public:
