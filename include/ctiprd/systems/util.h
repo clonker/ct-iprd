@@ -9,6 +9,20 @@
 
 namespace ctiprd::systems {
 
+template<typename T>
+concept system = requires {
+    { T::dtype };
+    /*{ T::periodic };
+    { T::DIM };
+    { T::kBT };
+    { T::boxSize };  // todo check for array and dims
+    { T::ExternalPotentials };
+    { T::PairPotentials };
+    { T::ReactionsO1 };
+    { T::ReactionsO2 };
+    { T::types };*/
+};
+
 template<auto &types>
 static constexpr std::size_t particleTypeId(std::string_view name) {
     std::size_t i = 0;
@@ -20,7 +34,7 @@ static constexpr std::size_t particleTypeId(std::string_view name) {
     return i;
 }
 
-template<typename System>
+template<system System>
 struct SystemInfo {
     using SystemType = System;
     using dtype = typename System::dtype;
@@ -60,21 +74,6 @@ struct SystemInfo {
     static constexpr dtype diffusionConstantOf(std::string_view name) {
         return diffusionConstantOf(particleId(name));
     }
-};
-
-// todo would be better to do this for System!
-template<typename T>
-concept system_info = requires {
-    { T::SystemType };
-    { T::dtype };
-    { T::periodic } -> std::same_as<bool>;
-    { T::DIM } -> std::same_as<std::size_t>;
-    { T::boxSize };  // todo check for array and dims
-    { T::nTypes } -> std::same_as<std::size_t>;
-    { T::ExternalPotentials };
-    { T::PairPotentials };
-    { T::hasForces } -> std::same_as<bool>;
-    // todo check rest
 };
 
 }

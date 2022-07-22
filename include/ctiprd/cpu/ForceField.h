@@ -21,9 +21,8 @@
 
 namespace ctiprd::cpu::potentials {
 
-template<typename ParticleCollection, systems::system_info System>
+template<typename ParticleCollection, systems::system System>
 struct ForceField {
-    // using SystemInfo = ctiprd::systems::SystemInfo<System>;
     static constexpr std::size_t DIM = System::DIM;
     using dtype = typename System::dtype;
     using ExternalPotentials = typename System::ExternalPotentials;
@@ -75,7 +74,7 @@ struct ForceField {
         }
     }
 
-    explicit ForceField(const typename System::SystemType &system) {
+    explicit ForceField(const System &system) {
         std::tie(potentialsO1, backingO1) = forces::generateMapO1<ParticleCollection>(system);
         std::tie(potentialsO2, backingO2) = forces::generateMapO2<ParticleCollection>(system);
 
