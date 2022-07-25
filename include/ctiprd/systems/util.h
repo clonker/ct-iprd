@@ -6,32 +6,39 @@
 
 #include <string_view>
 #include <algorithm>
+#include <type_traits>
+
+#include <ctiprd/ParticleTypes.h>
 
 namespace ctiprd::systems {
 
 template<typename T>
-concept system = requires {
-    { T::dtype };
-    /*{ T::periodic };
-    { T::DIM };
-    { T::kBT };
-    { T::boxSize };  // todo check for array and dims
-    { T::ExternalPotentials };
-    { T::PairPotentials };
-    { T::ReactionsO1 };
-    { T::ReactionsO2 };
-    { T::types };*/
+concept system = requires (T instance){
+    { typename T::dtype{} } -> std::floating_point;
+    { T::periodic } -> std::convertible_to<bool>;
+    { T::DIM } -> std::convertible_to<std::size_t>;
+    { T::kBT } -> std::convertible_to<typename T::dtype>;
+    { T::boxSize } -> std::convertible_to<std::array<typename T::dtype, T::DIM>>;
+    { instance.externalPotentials };
+    { instance.pairPotentials };
+    { instance.reactionsO1 };
+    { instance.reactionsO2 };
+    { instance.types };
+    { std::tuple_size_v<typename T::ExternalPotentials> };
+    { std::tuple_size_v<typename T::PairPotentials> };
+    { std::tuple_size_v<typename T::ReactionsO1> };
+    { std::tuple_size_v<typename T::ReactionsO2> };
+    { instance.types[0] } -> std::convertible_to<ParticleType<typename T::dtype>>;
 };
 
 template<auto &types>
 static constexpr std::size_t particleTypeId(std::string_view name) {
-    std::size_t i = 0;
-    for(auto it = begin(types); it != end(types); ++it, ++i) {
-        if (it->name == name) {
-            break;
-        }
+    std::size_t typeIndex = 0;
+    for(const auto &type : types) {
+        if (type.name == name) { break; }
+        ++typeIndex;
     }
-    return i;
+    return typeIndex;
 }
 
 template<system System>
