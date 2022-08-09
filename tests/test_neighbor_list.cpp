@@ -50,21 +50,21 @@ TEST_CASE("Test NeighborList for two particles", "[nl]") {
     auto pool = ctiprd::config::make_pool(8);
 
     ctiprd::cpu::nl::NeighborList<2, false, float, true> nl {{10., 10.}, 1., 1};
-    auto collection = std::make_shared<CollectionType>();
-    collection->addParticle({{0, 0}}, "A");
-    collection->addParticle({{0, 0}}, "A");
+    CollectionType collection{};
+    collection.addParticle({{0, 0}}, "A");
+    collection.addParticle({{0, 0}}, "A");
 
-    nl.update(collection, pool);
+    nl.update(&collection, pool);
 
     nl.forEachNeighborInCell<true>([](auto pId, auto nId) {
         spdlog::error("pid {}, nid {}", pId, nId);
     }, static_cast<std::uint32_t>(55));
 
-    nl.forEachNeighbor(0, *collection, [](auto nId, const auto&, const auto&, const auto&) {
+    nl.forEachNeighbor(0, collection, [](auto nId, const auto&, const auto&, const auto&) {
         spdlog::error("0 got neighbor {}", nId);
     });
 
-    nl.forEachNeighbor(1, *collection, [](auto nId, const auto&, const auto&, const auto&) {
+    nl.forEachNeighbor(1, collection, [](auto nId, const auto&, const auto&, const auto&) {
         spdlog::error("1 got neighbor {}", nId);
     });
 }

@@ -142,7 +142,7 @@ public:
     }
 
     template<typename ParticleCollection, typename Pool>
-    void update(std::shared_ptr<ParticleCollection> collection, std::shared_ptr<Pool> pool) {
+    void update(ParticleCollection* collection, std::shared_ptr<Pool> pool) {
         list.resize(collection->size() + 1);
         std::fill(std::begin(list), std::end(list), 0);
         std::fill(std::begin(head), std::end(head), thread::copyable_atomic<std::size_t>());
@@ -179,24 +179,6 @@ public:
     template<typename Position>
     std::uint32_t positionToBoxIx(const Position &pos) const {
         return _index.index(gridPos(pos));
-    }
-
-    template<typename T>
-    std::uint32_t cellNeighborsBegin(const T &cellIndex, auto dim) const {
-        if constexpr(!periodic) {
-            return cellIndex[dim] >= nSubdivides ? (cellIndex[dim] - nSubdivides) : 0;
-        } else {
-            return cellIndex[dim] >= nSubdivides ? cellIndex[dim] - nSubdivides : (_index[dim]  - cellIndex[dim]) % _index[dim];
-        }
-    }
-
-    template<typename T>
-    std::uint32_t cellNeighborsEnd(const T &cellIndex, auto dim) const {
-        if constexpr(!periodic) {
-            return cellIndex[dim] < _index[dim] - nSubdivides ? (cellIndex[dim] + nSubdivides + 1) : _index[dim];
-        } else {
-            return (cellIndex[dim] + nSubdivides + 1) % _index[dim];
-        }
     }
 
     template<typename F, typename PoolPtr>

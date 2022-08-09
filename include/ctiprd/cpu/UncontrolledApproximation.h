@@ -66,7 +66,7 @@ struct UncontrolledApproximation {
         std::vector<std::future<void>> futures;
 
         if constexpr(nReactionsO2 > 0) {
-            neighborList_->update(particles, pool);
+            neighborList_->update(particles.get(), pool);
         }
 
         std::mutex mutex;

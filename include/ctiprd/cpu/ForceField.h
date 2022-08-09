@@ -35,7 +35,7 @@ struct ForceField {
     template<typename Particles, typename Pool>
     void forces(std::shared_ptr<Particles> particles, std::shared_ptr<Pool> pool, bool wait = true) {
         if constexpr(nPairPotentials > 0) {
-            neighborList_->update(particles, pool);
+            neighborList_->update(particles.get(), pool);
         }
 
         if constexpr(nExternalPotentials > 0 || nPairPotentials > 0) {
