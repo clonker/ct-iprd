@@ -146,15 +146,15 @@ public:
         list.resize(collection->size() + 1);
         std::fill(std::begin(list), std::end(list), 0);
         std::fill(std::begin(head), std::end(head), thread::copyable_atomic<std::size_t>());
-        auto updateOp = [this](std::size_t particleId, const auto &pos, const auto &type, const auto&/*noe*/) {
+        auto updateOp = [this](std::size_t particleId, const auto &pos, const auto &type, const auto&/*velocity*/) {
             if(isAllowedType(type)) {
                 const auto boxId = positionToBoxIx(&pos.data[0]);
 
                 // CAS
                 auto &atomic = *head.at(boxId);
                 auto currentHead = atomic.load();
-                while (!atomic.compare_exchange_weak(currentHead, particleId)) {}
-                list[particleId] = currentHead;
+                while (!atomic.compare_exchange_weak(currentHead, particleId + 1)) {}
+                list[particleId + 1] = currentHead;
             }
         };
 
@@ -240,11 +240,11 @@ public:
                 while (neighborId != 0) {
                     if constexpr(all) {
                         if(neighborId != particleId) {
-                            func(particleId, neighborId);
+                            func(particleId - 1, neighborId - 1);
                         }
                     } else {
                         if (neighborId > particleId) {
-                            func(particleId, neighborId);
+                            func(particleId - 1, neighborId - 1);
                         }
                     }
                     neighborId = list.at(neighborId);
@@ -269,9 +269,9 @@ public:
 
             auto neighborId = (*head.at(neighborCellId)).load();
             while (neighborId != 0) {
-                if (neighborId != particleId) {
-                    fun(neighborId, collection.position(neighborId), collection.typeOf(neighborId),
-                        collection.force(neighborId));
+                if (neighborId - 1 != particleId) {
+                    fun(neighborId - 1, collection.position(neighborId - 1), collection.typeOf(neighborId - 1),
+                        collection.force(neighborId - 1));
                 }
                 neighborId = list.at(neighborId);
             }
