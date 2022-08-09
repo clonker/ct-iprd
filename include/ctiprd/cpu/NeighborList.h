@@ -148,7 +148,7 @@ public:
         std::fill(std::begin(head), std::end(head), thread::copyable_atomic<std::size_t>());
         auto updateOp = [this](std::size_t particleId, const auto &pos, const auto &type, const auto&/*velocity*/) {
             if(isAllowedType(type)) {
-                const auto boxId = positionToBoxIx(&pos.data[0]);
+                const auto boxId = positionToCellIndex(&pos.data[0]);
 
                 // CAS
                 auto &atomic = *head.at(boxId);
@@ -177,7 +177,7 @@ public:
     }
 
     template<typename Position>
-    std::uint32_t positionToBoxIx(const Position &pos) const {
+    std::uint32_t positionToCellIndex(const Position &pos) const {
         return _index.index(gridPos(pos));
     }
 
