@@ -38,9 +38,11 @@ find_package(Threads REQUIRED)
 find_package(pybind11 REQUIRED)
 find_package(tsl-robin-map REQUIRED)
 
+# CUDA::cudart CUDA::cuda_driver  link
+
 add_library(${PROJECT_NAME} INTERFACE)
 target_include_directories(${PROJECT_NAME} INTERFACE include)
-target_link_libraries(${PROJECT_NAME} INTERFACE fmt::fmt spdlog::spdlog_header_only tsl::robin_map Threads::Threads CUDA::cudart CUDA::cuda_driver ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(${PROJECT_NAME} INTERFACE fmt::fmt spdlog::spdlog_header_only tsl::robin_map Threads::Threads ${CMAKE_THREAD_LIBS_INIT})
 add_library(ct-iprd::ct-iprd ALIAS ${PROJECT_NAME})
 
 if(CT_IPRD_BUILD_TESTS)
