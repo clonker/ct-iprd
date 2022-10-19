@@ -144,4 +144,113 @@ struct LotkaVolterra {
     PairPotentials pairPotentials{};
 };
 
+template<typename T>
+struct LotkaVolterra3D {
+    using Cfg = Conf<T>;
+    using dtype = T;
+    static constexpr std::size_t DIM = 3;
+    static constexpr std::array<T, DIM> boxSize{10., 10., 10.};
+    static constexpr bool periodic = true;
+    static constexpr T kBT = 2.43614;
+    static constexpr ParticleTypes<dtype, 2> types{{
+              {
+                      .name = "predator",
+                      .diffusionConstant = Cfg::diffPred
+              },
+              {
+                      .name = "prey",
+                      .diffusionConstant = Cfg::diffPrey
+              },
+    }};
+    static constexpr std::size_t preyId = particleTypeId<types>("prey");
+    static constexpr std::size_t predatorId = particleTypeId<types>("predator");
+
+    LotkaVolterra3D() {
+        {
+            auto& [birth, death] = reactionsO1;
+            birth = reactions::doi::Fission<T>{
+                    .eductType = preyId,
+                    .productType1 = preyId,
+                    .productType2 = preyId,
+                    .productDistance = Cfg::alphaDistance,
+                    .rate = Cfg::alpha
+            };
+            death = reactions::doi::Decay<T>{
+                    .eductType = predatorId,
+                    .rate = Cfg::gamma
+            };
+        }
+        {
+            auto &[preySocialFriction, predatorSocialFriction, predEatsPrey] = reactionsO2;
+            preySocialFriction = reactions::doi::Fusion<T>{
+                    .eductType1 = preyId,
+                    .eductType2 = preyId,
+                    .productType = preyId,
+                    .reactionRadius = Cfg::frictionRadius,
+                    .rate = Cfg::frictionMic
+            };
+            predatorSocialFriction = reactions::doi::Fusion<T>{
+                    .eductType1 = predatorId,
+                    .eductType2 = predatorId,
+                    .productType = predatorId,
+                    .reactionRadius = Cfg::frictionRadius,
+                    .rate = Cfg::frictionMic
+            };
+            predEatsPrey = reactions::doi::Catalysis<T>{
+                    .catalyst = predatorId,
+                    .eductType = preyId,
+                    .productType = predatorId,
+                    .reactionRadius = Cfg::betaRadius,
+                    .rate = Cfg::betaMic
+            };
+        }
+
+
+        {
+            static constexpr dtype eps = 1e-5;
+
+            auto kmac = rates::macroscopicRate(Cfg::betaMic, types[preyId].diffusionConstant,
+                                               types[predatorId].diffusionConstant, Cfg::betaRadius);
+            if(std::abs(kmac - Cfg::beta) > eps) {
+                throw std::runtime_error(fmt::format("kmac = {}, beta = {}", kmac, Cfg::beta));
+            }
+        }
+        {
+            static constexpr dtype eps = 1e-5;
+
+            auto kmac = rates::macroscopicRate(Cfg::frictionMic, types[preyId].diffusionConstant,
+                                               types[predatorId].diffusionConstant, Cfg::frictionRadius);
+            if(std::abs(kmac - Cfg::friction) > eps) {
+                throw std::runtime_error(fmt::format("kmac = {}, friction = {}", kmac, Cfg::friction));
+            }
+        }
+        {
+            auto &box = std::get<0>(externalPotentials);
+            box.geometry.v0 = {-4., -4., -4.};
+            box.geometry.v1 = {4., 4., 4.};
+            box.k = 150.;
+        }
+    }
+
+
+    using ExternalPotentials = std::tuple<potentials::external::BoxInclusion<dtype, DIM>>;
+    using PairPotentials = std::tuple<>;
+
+    using ReactionsO1 = std::tuple<
+            reactions::doi::Fission<T>, // prey birth
+            reactions::doi::Decay<T> // predator death
+    >;
+    using ReactionsO2 = std::tuple<
+            reactions::doi::Fusion<T>, // prey social friction
+            reactions::doi::Fusion<T>, // predator social friction
+            reactions::doi::Catalysis<T> // predator eats prey
+    >;
+
+    ReactionsO1 reactionsO1{};
+    ReactionsO2 reactionsO2{};
+
+    ExternalPotentials externalPotentials{};
+    PairPotentials pairPotentials{};
+};
+
 }
