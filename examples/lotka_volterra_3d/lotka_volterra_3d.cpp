@@ -34,7 +34,7 @@ struct Conf {
 };
 
 template<typename T>
-struct LotkaVolterra2d {
+struct LotkaVolterra3d {
     using Cfg = Conf<T>;
     using dtype = T;
     static constexpr std::size_t DIM = 3;
@@ -59,7 +59,7 @@ struct LotkaVolterra2d {
     static constexpr std::size_t predatorId = ctiprd::systems::particleTypeId<types>("predator");
     static constexpr std::size_t wallId = ctiprd::systems::particleTypeId<types>("barrier");
 
-    LotkaVolterra2d() {
+    LotkaVolterra3d() {
         {
             auto &[birth, death] = reactionsO1;
             birth = ctiprd::reactions::doi::Fission<T>{
@@ -161,7 +161,7 @@ struct LotkaVolterra2d {
     PairPotentials pairPotentials{};
 };
 
-using System = LotkaVolterra2d<float>;
+using System = LotkaVolterra3d<float>;
 namespace py = pybind11;
 
 template<typename T>
@@ -181,7 +181,7 @@ void check_shape(const np_array <System::dtype> &arr) {
     }
 }
 
-PYBIND11_MODULE(lv2d_mod, m) {
+PYBIND11_MODULE(lv3d_mod, m) {
     ctiprd::binding::exportBaseTypes<System::dtype>(m);
     ctiprd::binding::exportSystem<System>(m, "LotkaVolterra");
 
