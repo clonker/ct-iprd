@@ -34,7 +34,7 @@ public:
         py::gil_scoped_acquire acquire;
 
         const auto nParticles = integrator.particles()->size();
-        std::array shapeTraj {nParticles, static_cast<std::size_t>(2)};
+        std::array shapeTraj {nParticles, System::DIM};
         std::array shapeTypes {nParticles};
         positions_.emplace_back(shapeTraj);
         particleTypes_.emplace_back(shapeTypes);
@@ -51,8 +51,9 @@ public:
 
         auto futures = integrator.particles()->forEachParticle([&trajBegin, &typesBegin](auto particleId, const auto &pos, const auto& type, const auto &) {
             typesBegin[particleId] = type;
-            trajBegin[2*particleId] = pos[0];
-            trajBegin[2*particleId+1] = pos[1];
+            for (uint32_t i = 0; i < System::DIM; ++i) {
+                trajBegin[System::DIM * particleId + i] = pos[0];
+            }
         }, pool);
         for(auto &future : futures) {
             future.wait();
