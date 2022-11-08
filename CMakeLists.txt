@@ -14,7 +14,7 @@ else()
     set(CT_IPRD_BUILD_TESTS OFF CACHE BOOL "Whether to build the c++ unit tests")
 endif()
 
-set(CT_IPRD_CUDA ON CACHE BOOL "Whether to add cuda")
+set(CT_IPRD_CUDA OFF CACHE BOOL "Whether to add cuda")
 if(CT_IPRD_CUDA)
     enable_language(CUDA)
     set(CMAKE_CUDA_STANDARD 17)

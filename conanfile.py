@@ -8,7 +8,7 @@ class CTiPRD(ConanFile):
         "pybind11/2.10.0",
         "spdlog/1.9.2",
         "catch2/2.13.7",
-        "benchmark/1.6.1",
+        "benchmark/1.7.0",
         "tsl-robin-map/1.0.1"
     )
     generators = "cmake", "gcc", "txt", "cmake_find_package"
