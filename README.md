@@ -1,3 +1,5 @@
+# Migrated to https://codeberg.org/clonker/ct-iprd
+
 CT-iPRD
 -------
 
